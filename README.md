@@ -31,14 +31,18 @@ Here, the 'ASSAY_PLATE' values **MUST** match the names of your raw data files. 
 ### Step 3: Raw data concatenation and processing
 To analyze many files at once, the first step is to concatenate the data with the file_concatenator.py script. You will need to navigate to the folder in which your raw data files are stored and then run:
 
-``` python3 file_concatenator.py```
+```python3 file_concatenator.py -i input_directory -b Analysis1```
 
-The script will find all files with a "*.txt" extension, transform them to data frames with an additional column 'Origin of data' that will have the file name listed. It is therefore **very important** that your file names match the name listed under 'ASSAY_PLATE' in the metadata file, as this is how the information is linked between the two tables. A new file with a "_concatenated.txt" suffix will be created in your current directory. This will serve as the data input for the next step.
+-i is the fuull path to where your raw data files are
+-b is a name that you would like your input file to be called
+
+The script will find all files with a "*.txt" extension, transform them to data frames with an additional column 'Origin of data' that will have the file name listed. It is therefore **very important** that your file names match the name listed under 'ASSAY_PLATE' in the metadata file, as this is how the information is linked between the two tables. 
+A new file with a "_concatenated.txt" suffix will be created in your current directory, so in this example, our file would be called "Analysis1_concatenated.txt". This will serve as the data input for the next step.
 
 ### Step 4: Running the analysis
 The analysis pipeline can be run with :
 
-```python3 multiprocessor_main.py -c blah_concatenated.txt -m metadata_file.txt -p num_of_processors```
+```python3 multiprocessor_main.py -c Analysis1_concatenated.txt -m metadata_file.txt -p num_of_processors```
 
 This can take some time depending on the number of plates included in the analysis. At the time of testing, using 6 processors on a standard MacBook Pro, it took ~1 hour to analyze 100 384-well plates.
 
