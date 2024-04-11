@@ -1,7 +1,8 @@
 # DSF_pipeline
 All scripts for analysing and visualizing DSF data
 
-### Step 1: Raw data format
+##### Step 1: Raw data format
+
 Currently, the pipeline is designed to take in files with the following raw data format:
 
 | X     | A1: Sample 1 | X     | A2: Sample 2 | X     | A3: Sample 3 | X     | A4: Sample 4 |
@@ -16,7 +17,8 @@ Currently, the pipeline is designed to take in files with the following raw data
 
 Please ensure your data follows the same format for a seamless analysis.
 
-### Step 2: Metadata format
+##### Step 2: Metadata format
+
 Metadata must be stored in the following format (Do not include control wells in the metadata, these are assumed blank):
 
 | ASSAY_PLATE    | SOURCE_PLATE | WELL | COMPOUND    | FRACTION |
@@ -28,7 +30,8 @@ Metadata must be stored in the following format (Do not include control wells in
 
 Here, the 'ASSAY_PLATE' values **MUST** match the names of your raw data files. 'SOURCE_PLATE' should be the name of the collection your samples originated from. Do not include control wells in the metadata. If your compounds are not the result of fractionation or are pure, leave this column as zeros all the way down. 
 
-### Step 3: Raw data concatenation and processing
+##### Step 3: Raw data concatenation and processing
+
 To analyze many files at once, the first step is to concatenate the data with the file_concatenator.py script. You will need to navigate to the folder in which your raw data files are stored and then run:
 
 ```python3 file_concatenator.py -i input_directory -b Analysis1```
@@ -39,7 +42,8 @@ To analyze many files at once, the first step is to concatenate the data with th
 The script will find all files with a "*.txt" extension, transform them to data frames with an additional column 'Origin of data' that will have the file name listed. It is therefore **very important** that your file names match the name listed under 'ASSAY_PLATE' in the metadata file, as this is how the information is linked between the two tables. 
 A new file with a "_concatenated.txt" suffix will be created in your current directory, so in this example, our file would be called "Analysis1_concatenated.txt". This will serve as the data input for the next step.
 
-### Step 4: Running the analysis
+##### Step 4: Running the analysis
+
 The analysis pipeline can be run with :
 
 ```python3 multiprocessor_main.py -c Analysis1_concatenated.txt -m metadata_file.txt -p num_of_processors```
@@ -47,4 +51,22 @@ The analysis pipeline can be run with :
 This can take some time depending on the number of plates included in the analysis. At the time of testing, using 6 processors on a standard MacBook Pro, it took ~1 hour to analyze 100 384-well plates.
 
 Once complete, 4 files would have been generated in the active directory:
- - 
+ - "Final_curves.txt" includes all coordinates for original and cleaned/sliced curves
+ - "Final_results.txt" has results from all calculations, including final melting temperatures, amplitudes, failures, reasons for failures etc
+ - "Plate_report.txt" is a small table listing which plates passed or failed. For any plate in which 8 or more control wells failed, the entire plate is labelled a failure
+ - "Potential_problems.txt" lists any wells that have failed consistently across 3 or more plates. This has no bearing on any of the results and is meant to serve in an informative capacity. i.e. if the same well is failing in several plates, there may be a pipetting issue.
+
+##### Step 5: Visualization
+
+This step is optional. The visualization script should be run in the same folder as the outputted results. The script is run with:
+
+```python3 visualization.py ```
+
+This will start up a local Dash server, with a message like so:
+
+>Dash is running on http://127.0.0.1:8050/
+>
+> * Serving Flask app 'visualization'
+> * Debug mode: on
+
+Navigate to the link provided in your web browser
