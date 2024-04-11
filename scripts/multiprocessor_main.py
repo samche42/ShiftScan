@@ -3,6 +3,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--concat_file", help="Full file path to concatenated input file")
 parser.add_argument("-m", "--metadata", help="Full file path to metadata file")
+parser.add_argument("-p", "--processors", help="No. of processors you want to use")
 
 args = parser.parse_args()
 
@@ -51,8 +52,8 @@ final_df = pd.merge(semifinal_df2,map_raw_df[['Unique_key','Compound','Fraction'
 #Working in tsinghua substring check into this monstrous super nested, glorified if then statement
 
 final_df['Well_type'] = (np.where(final_df['Source_Plate'].str.contains('singhua'), \
-	np.where((final_df['Column'] == 1) | (final_df['Column'] == 24), 'Control', (np.where((final_df['Compound'].isnull()), 'Blank', 'Experimental'))), \
-	np.where((final_df['Column'] == 1) | (final_df['Column'] == 2), 'Control', (np.where((final_df['Compound'].isnull()), 'Blank', 'Experimental')))))
+    np.where((final_df['Column'] == 1) | (final_df['Column'] == 24), 'Control', (np.where((final_df['Compound'].isnull()), 'Blank', 'Experimental'))), \
+    np.where((final_df['Column'] == 1) | (final_df['Column'] == 2), 'Control', (np.where((final_df['Compound'].isnull()), 'Blank', 'Experimental')))))
 
 #Finally, we're going to try and bypass the noise of early high fluorescence by removing all data points with Temps lower than 35 degrees. 
 final_df = final_df[final_df['Temp'] > 35]
@@ -88,7 +89,7 @@ all_subcurves = []
 #Process each well
 unique_keys = list(final_df.Unique_key.unique()) #Create list of all unique keys for subsetting
 
-with multiprocessing.Pool(processes=6) as pool:
+with multiprocessing.Pool(processes=args.processors) as pool:
     partial_process_wrapper = partial(process_wrapper, final_df=final_df)
     results = pool.map(partial_process_wrapper, unique_keys)
     for original_curve_rows, sub_curve_rows, Tm_rows in results:
@@ -154,7 +155,6 @@ ctrl_error_df = pd.merge(ctrl_error_df, ctrl_amplitude_failures, on=['Assay_Plat
 #
 ################################
 import math
-import numpy as np
 
 #First, let's QC our experimentals
 avg_ctrl_amplitude_df = Tm_df[(Tm_df['Well_type'] == 'Control') & (~Tm_df['Error'].str.contains('Failed'))].groupby('Assay_Plate', as_index=False)['Amplitude'].mean() #Get average amplitude of all non-failed ctrl wells per plate
