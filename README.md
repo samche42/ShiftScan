@@ -26,7 +26,7 @@ Metadata must be stored in the following format (Do not include control wells in
 | RBD_040323_01  | Collection2  | G19  | compound_z  | 0        |
 | RBD_040323_01  | Collection2  | G20  | compound_q  | 1        |
 
-Here, 'ASSAY_PLATE' **MUST** match the names of your raw data files. 'SOURCE_PLATE' should be the name of the collection your samples originated from. Do not include control wells in the metadata. If your compounds are not fractions leave this column as zeros all the way down. 
+Here, the 'ASSAY_PLATE' values **MUST** match the names of your raw data files. 'SOURCE_PLATE' should be the name of the collection your samples originated from. Do not include control wells in the metadata. If your compounds are not the result of fractionation or are pure, leave this column as zeros all the way down. 
 
 ### Step 3: Raw data concatenation and processing
 To analyze many files at once, the first step is to concatenate the data with the file_concatenator.py script. You will need to navigate to the folder in which your raw data files are stored and then run:
