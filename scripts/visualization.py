@@ -179,7 +179,6 @@ app.layout = html.Div([html.H1('DSF Analysis Visualizations', style = {'backgrou
                         df_pipette.to_dict('records'), 
                         [{'name': i, 'id': i} for i in df_pipette.columns],
                         id = 'pipette_issues_table',
-                        sort_action='native',
                         export_format='xlsx',
                         style_data_conditional=pipette_style_data_conditional, 
                         style_as_list_view=True, style_cell={'fontSize':12, 'font-family':'Arial'}, style_header = {'backgroundColor': '#FFEF79','fontWeight': 'bold'})
