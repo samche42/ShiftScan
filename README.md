@@ -1,6 +1,14 @@
 # DSF pipeline
 Analysis and visualization of high-throughput DSF data
 
+#### Step 0: Installation
+
+Download/Clone all files in https://github.com/samche42/DSF_pipeline/tree/main/scripts
+
+Create DSF conda anv using ```conda env create --file=DSF_env.yml```
+
+Activate the environment and you're ready to go!
+
 #### Step 1: Raw data format
 
 Currently, the pipeline is designed to take in files with the following raw data format:
