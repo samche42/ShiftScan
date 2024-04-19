@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import scipy.optimize as optimization
 from scipy.interpolate import splev, splrep
 from scipy.optimize import OptimizeWarning
