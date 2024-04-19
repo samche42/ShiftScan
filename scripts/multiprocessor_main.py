@@ -3,8 +3,13 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--concat_file", help="Full file path to concatenated input file")
 parser.add_argument("-m", "--metadata", help="Full file path to metadata file")
-parser.add_argument("-p", "--processors", help="No. of processors you want to use")
-parser.add_argument("-c", "--control_cols", help="No. of processors you want to use")
+parser.add_argument("-p", "--processors", help="No. of processors you want to use", default = 4)
+parser.add_argument("-c", "--control_cols", help="The column numbers of your controls", default = "1,2")
+parser.add_argument("-x", "--failed_control_wells", help="The number of controls allowed to fail before a plate is failed", default = 8)
+parser.add_argument("-t", "--ctrl_tm_cutoff", help="Maximum z-score of ctrl curve melting temps", default = 2)
+parser.add_argument("-a", "--ctrl_amp_cutoff", help="Maximum z-score of ctrl curve amplitude", default = 3)
+parser.add_argument("-u", "--max_amp_cutoff", help="Maximum relative amplitude of curves allowed", default = 6)
+parser.add_argument("-l", "--min_amp_cutoff", help="Minimum relative amplitude of curves allowed", default = 0.25)
 
 args = parser.parse_args()
 
@@ -150,8 +155,8 @@ if __name__ == '__main__':
     Tm_df['Tm_difference'] = (Tm_df['Boltzmann_Tm']-Tm_df['Smooth_Tm']).abs() #Find absolute difference between smoothed and boltzmann Tm
 
     #Fail ctrls where the z-scores are beyond the designated cutoffs
-    Tm_cutoff = 2
-    Amp_cutoff = 3
+    Tm_cutoff = args.ctrl_tm_cutoff
+    Amp_cutoff = args.ctrl_amp_cutoff
     Tm_df['Error'] = np.where((Tm_df['Ctrl_Tm_z-score'] > Tm_cutoff), Tm_df['Error']+ "Failed: Tm > 2 std away from mean. ", Tm_df['Error'])
     Tm_df['Error'] = np.where((Tm_df['Ctrl_Amplitude_z-score'] > Amp_cutoff), Tm_df['Error']+ "Failed: Amplitude > 3 std away from mean. ", Tm_df['Error'])
 
@@ -180,10 +185,10 @@ if __name__ == '__main__':
     Tm_df = pd.merge(Tm_df, avg_ctrl_amplitude_df, on = 'Assay_Plate') #Merge info back in to Tm_df
 
     #Fail wells that have a amplitude less than 1/4 of the ctrl amplitude
-    amp_lower_cutoff = 0.25 
+    amp_lower_cutoff = args.min_amp_cutoff
     Tm_df['Amplitude_lower_cutoff'] = Tm_df['Ctrl_avg_amplitude']*amp_lower_cutoff #Just add the cutoff value to Tm_df for easy calculation
     Tm_df['Error'] = np.where((Tm_df['Amplitude'] < Tm_df['Amplitude_lower_cutoff']), Tm_df['Error']+ "Failed: Amplitude too small. ", Tm_df['Error'])
-    amp_upper_cutoff = 6
+    amp_upper_cutoff = args.max_amp_cutoff
     Tm_df['Amplitude_upper_cutoff'] = Tm_df['Ctrl_avg_amplitude']*amp_upper_cutoff #Just add the cutoff value to Tm_df for easy calculation
     Tm_df['Error'] = np.where((Tm_df['Amplitude'] > Tm_df['Amplitude_upper_cutoff']), Tm_df['Error']+ "Failed: Amplitude too large. ", Tm_df['Error'])
 
@@ -209,9 +214,9 @@ if __name__ == '__main__':
     ctrl_error_df['Total'].fillna(0, inplace=True) #Fill in nans with 0s
     ctrl_error_df['Total'] = ctrl_error_df['Total'].astype(int) #Convert column values to integers instead of float (just looks neater to me)
     plate_status_df = ctrl_error_df.groupby('Assay_Plate')['Total'].sum().reset_index() #Count failures per plate
-    plate_status_df['Plate_status'] = np.where(plate_status_df['Total'] > 8, 'Failed','OK') #Assign plate status according to ctrl failure cutoff
+    plate_status_df['Plate_status'] = np.where(plate_status_df['Total'] > args.failed_control_wells, 'Failed','OK') #Assign plate status according to ctrl failure cutoff
     Tm_df = pd.merge(Tm_df, plate_status_df, on = 'Assay_Plate') #merge that all back in
-    Tm_df['Spotfire_Platename'] = np.where(Tm_df['Total'] >8, Tm_df['Source_Plate']+" ("+Tm_df['Plate_status']+")", Tm_df['Source_Plate']) #Add "Failed" to plate name to make it obvious in visulizations
+    Tm_df['Spotfire_Platename'] = np.where(Tm_df['Total'] >args.failed_control_wells, Tm_df['Source_Plate']+" ("+Tm_df['Plate_status']+")", Tm_df['Source_Plate']) #Add "Failed" to plate name to make it obvious in visulizations
 
     #next, we'll get a final Tm for all wells that have passed (ctrl and experi)
     Tm_df['Final_Tm'] = np.where(Tm_df['Error'].str.contains('Failed'), np.NaN, Tm_df['Smooth_Tm']) #Report Smooth Tm as final Tm unless well failed
@@ -269,4 +274,3 @@ if __name__ == '__main__':
     final_curves.to_csv("Final_curves.txt",sep="\t",index=False)
     plate_report.to_csv("Plate_report.txt",sep="\t",index=False)
     well_error_count_df.to_csv("Potential_problems.txt",sep="\t",index=False)
-    print("DSF analysis complete!")
