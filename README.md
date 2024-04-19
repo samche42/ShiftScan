@@ -33,10 +33,13 @@ Metadata must be stored in the following format (Do not include control wells in
 |----------------|--------------|------|-------------|----------|
 | RBD_040323_01  | Collection1  | P11  | compound_x  | 3        |
 | RBD_040323_01  | Collection1  | G18  | compound_y  | 1        |
-| RBD_040323_01  | Collection2  | G19  | compound_z  | 0        |
-| RBD_040323_01  | Collection2  | G20  | compound_q  | 1        |
+| RBD_040323_02  | Collection2  | G19  | compound_z  | 0        |
+| RBD_040323_02  | Collection2  | G20  | compound_q  | 1        |
 
-Here, the 'ASSAY_PLATE' values **MUST** match the names of your raw data files. 'SOURCE_PLATE' should be the name of the collection your samples originated from. Do not include control wells in the metadata. If your compounds are not the result of fractionation or are pure, leave this column as zeros all the way down. 
+ - The 'ASSAY_PLATE' values **MUST** match the names of your raw data files. E.g. One of the input data files was called "RBD_040323_01.txt"
+ - The 'SOURCE_PLATE' should be the name of the collection your samples originated from.
+ - Do not include control wells in the metadata.
+ - If your compounds are pure (I.e. not fractions), leave the 'FRACTION' column as zeros all the way down. 
 
 #### Step 3: Raw data concatenation and processing
 
