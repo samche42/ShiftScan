@@ -46,16 +46,26 @@ A new file with a "_concatenated.txt" suffix will be created in your current dir
 
 The analysis pipeline can be run with :
 
-```python3 multiprocessor_main.py -f Analysis1_concatenated.txt -m metadata_file.txt -c 1,2 -p 6```
+```python3 multiprocessor_main.py -f Analysis1_concatenated.txt -m metadata_file.txt```
 
 where the parameters are:
 
 - ```-f``` The concatenated input file produced in Step3.
 - ```-m``` A tab-delimited file with metadata for all experimental wells. If a compound value is left blank, it is assumed that the well is empty and is not assessed.
-- ```-c``` A comma-delimited list of which columns contain your controls
-- ```-p``` The number of processors you wish to use
 
-This can take some time depending on the number of plates included in the analysis. At the time of testing, using 6 processors on a standard MacBook Pro, it took ~1 hour to analyze 100 384-well plates.
+Additionally, there are some additional parameters you can provide if you would like to tweak how the data is processed
+
+- ```-c``` A comma-delimited list of which columns contain your controls (Default:  "1,2")
+- ```-p``` The number of processors you wish to use (Default: 4)
+- ```-x``` The maximum number of control wells allowed to fail per plate. E.g. At default, if 9 control wells fail, the plate is failed. (Default: 8)
+- ```-t``` The maximum z-score of control melting temperatures tolerated. I.e. At default, if the z-score of a control well melting temp is 2.1 the well is failed. (Default: 2)
+- ```-a``` The maximum z-score of control melting curve amplitudes tolerated. I.e. At default, if the z-score of a control well amplitude is 3.1 the well is failed. (Default: 3)
+- ```-u``` The maximum relative amplitude of experimental wells allowed (relative to control average) (Default: 6)
+- ```-l``` The minimum relative amplitude of experimental wells allowed (relative to control average) (Default: 0.25)
+
+**Note: You can use the ```-h``` flag to list these options in the command line.
+
+The processing of data can take some time depending on the number of plates included in the analysis. At the time of testing, using 6 processors on a standard MacBook Pro, it took ~1 hour to analyze one hundred 384-well plates.
 
 Once complete, 4 files would have been generated in the active directory:
  - "Final_curves.txt" includes all coordinates for original and cleaned/sliced curves
