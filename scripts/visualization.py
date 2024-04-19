@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import dash
 from dash import Dash, html, dcc, Input, Output, State, dash_table, callback_context
 import pandas as pd
