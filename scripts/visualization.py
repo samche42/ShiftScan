@@ -265,6 +265,7 @@ app.layout = html.Div([html.H1('DSF Analysis Visualizations', style = {'backgrou
                             sort_action='native',
                             export_format='xlsx',
                             style_data_conditional=data_table_style_data_conditional, 
+                            style_table = {'height':'500px','overflow-y':'scroll'},
                             style_as_list_view=True, style_cell={'fontSize':12, 'font-family':'Arial'}, style_header = {'backgroundColor': '#cce6ff','fontWeight': 'bold'}),#Styling of table
                         ], id = 'results_table'),
                         #Generate all hit graphs button
