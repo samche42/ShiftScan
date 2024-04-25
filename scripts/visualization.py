@@ -482,6 +482,7 @@ def update_hit_table(n_clicks, lower_value, upper_value, lower_value_amp, upper_
                 row_deletable=True, 
                 sort_action='native',
                 export_format='xlsx',
+                style_table = {'height':'500px','overflow-y':'scroll'},
                 style_cell={'fontSize':12, 'font-family':'Arial'}, 
                 style_header = {'backgroundColor': '#eed9ff','fontWeight': 'bold'})
 
