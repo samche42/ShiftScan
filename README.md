@@ -41,28 +41,17 @@ Metadata must be stored in the following format (Do not include control wells in
  - Do not include control wells in the metadata.
  - If your compounds are pure (I.e. not fractions), leave the 'FRACTION' column as zeros all the way down. 
 
-#### Step 3: Raw data concatenation and processing
-
-To analyze many files at once, the first step is to concatenate the data with the file_concatenator.py script. You will need to navigate to the folder in which your raw data files are stored and then run:
-
-```python3 file_concatenator.py -i input_directory -b Analysis1```
-
-- ```-i``` is the full path to where your raw data files are
-- ```-b``` is a name that you would like your input file to be called
-
-The script will find all files with a "*.txt" extension, and transform them to data frames with an additional column 'Origin of data' that will have the file name listed. It is therefore **very important** that your file names match the name listed under 'ASSAY_PLATE' in the metadata file, as this is how the information is linked between the two tables. 
-A new file with a "_concatenated.txt" suffix will be created in your current directory, so in this example, our file would be called "Analysis1_concatenated.txt". This will serve as the data input for the next step.
-
-#### Step 4: Running the analysis
+#### Step 3: Running the analysis
 
 The analysis pipeline can be run with :
 
-```python3 multiprocessor_main.py -f Analysis1_concatenated.txt -m metadata_file.txt```
+```python3 multiprocessor_main.py -i Mock_input/ -m Mock_metadata/file.csv -o Mock_output/```
 
 where the parameters are:
 
-- ```-f``` The concatenated input file produced in Step3.
+- ```-i``` The path to the folder where all raw input files are loacted
 - ```-m``` A tab-delimited file with metadata for all experimental wells. If a compound value is left blank, it is assumed that the well is empty and is not assessed.
+- ```-o``` The path to the desired output folder. If it does not exist, a folder will be created with the name specified in this path
 
 Additionally, there are some additional parameters you can provide if you would like to tweak how the data is processed
 
@@ -73,6 +62,8 @@ Additionally, there are some additional parameters you can provide if you would 
 - ```-a``` The maximum z-score of control melting curve amplitudes tolerated. I.e. At default, if the z-score of a control well amplitude is 3.1 the well is failed. (Default: 3)
 - ```-u``` The maximum relative amplitude of experimental wells allowed (relative to control average) (Default: 6)
 - ```-l``` The minimum relative amplitude of experimental wells allowed (relative to control average) (Default: 0.25)
+- ```-s``` The desired smoothing factor for smoothing of raw data (default = 0.0005)
+- ```-n``` Whether the input data should be normalized per plate. Input options are "y" or "n". (Default: y)
 
 **Note: You can use the ```-h``` flag to list these options in the command line.
 
@@ -84,11 +75,11 @@ Once complete, 4 files would have been generated in the active directory:
  - "Plate_report.txt" is a small table listing which plates passed or failed. For any plate in which 8 or more control wells failed, the entire plate is labelled a failure
  - "Potential_problems.txt" lists any wells that have failed consistently across 3 or more plates. This has no bearing on any of the results and is meant to serve in an informative capacity. i.e. if the same well is failing in several plates, there may be a pipetting issue.
 
-#### Step 5: Visualization
+#### Step 4: Visualization
 
 This step is optional. The visualization script should be run in the same folder as the outputted result files. The script is run with:
 
-```python3 visualization.py ```
+```python3 visualization.py -i path/to/output/from/previous/step```
 
 This will start up a local Dash server, with a message like so:
 
