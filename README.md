@@ -69,7 +69,7 @@ Additionally, there are some additional parameters you can provide if you would 
 
 The processing of data can take some time depending on the number of plates included in the analysis. At the time of testing, using 6 processors on a standard MacBook Pro, it took ~1 hour to analyze one hundred 384-well plates.
 
-Once complete, 4 files would have been generated in the active directory:
+Once complete, 4 files would have been generated in the specified output directory:
  - "Final_curves.txt" includes all coordinates for original and cleaned/sliced curves
  - "Final_results.txt" has results from all calculations, including final melting temperatures, amplitudes, failures, reasons for failures etc
  - "Plate_report.txt" is a small table listing which plates passed or failed. For any plate in which 8 or more control wells failed, the entire plate is labelled a failure
@@ -77,7 +77,7 @@ Once complete, 4 files would have been generated in the active directory:
 
 #### Step 4: Visualization
 
-This step is optional. The visualization script should be run in the same folder as the outputted result files. The script is run with:
+This step is optional. The visualization script should be run using the ```i``` parameter to point to the specified output directory. The script is run with:
 
 ```python3 visualization.py -i path/to/output/from/previous/step```
 
