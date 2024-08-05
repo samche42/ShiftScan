@@ -8,8 +8,10 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 from dash.exceptions import PreventUpdate
 import numpy as np
-import argparse
 import math
+import argparse
+import urllib
+import json
 
 # Initialize the app
 app = Dash(__name__)
@@ -17,6 +19,7 @@ app.config.suppress_callback_exceptions = True
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input_dir", help="Full file path to output files from previous step")
+parser.add_argument("-z", "--port", help="Optional: Port to route to", default = 8050)
 
 args = parser.parse_args()
 
@@ -26,150 +29,265 @@ args = parser.parse_args()
 #
 ####################
 
+color1 = '#B4EDD2'
+color1_faded = '#e0fff1'
+color2 = '#A0CFD3'
+color3 = '#8D94BA'
+color4 = '#9A7AA0'
+color4_faded = '#d1b6d6' 
+color5 = '#87677B'
 
-yellow_tab_style = {
-    'background': '#FFEF79',
-    'border': '1px solid #FFDA0A',
+base_style = {
+    'border': '1px black',
     'color': 'black',
     'font-size': '14px',
-    'font-weight': 600,
+    'font-weight': 'bold',
     'font-family': 'Arial',
-    'border-radius': '4px',
-    'padding':'6px'
-}
+    'padding': '6px'}
 
-orange_tab_style = {
-    'background': '#F9C159',
-    'border': '1px solid orange',
+base_selected_style = {
+    'border': '3px solid black',
     'color': 'black',
     'font-size': '14px',
-    'font-weight': 600,
+    'font-weight': 'bold',
     'font-family': 'Arial',
-    'border-radius': '4px',
-    'padding':'6px',
-}
+    'padding':'6px'}
 
-red_tab_style = {
-    'background': '#FE667E',
-    'border': '1px solid red',
-    'color': 'black',
-    'font-size': '14px',
-    'font-weight': 600,
-    'font-family': 'Arial',
-    'border-radius': '4px',
-    'padding':'6px',
-}
+tab1_style = {**base_style,'background': color1}
+tab1_selected = {**base_selected_style,'background': color1}
 
-purple_tab_style = {
-    'background': '#D397FF',
-    'border': '1px solid purple',
-    'color': 'black',
-    'font-size': '14px',
-    'font-weight': 600,
-    'font-family': 'Arial',
-    'border-radius': '4px',
-    'padding':'6px',
-}
+tab2_style = {**base_style,'background': color2}
+tab2_selected = {**base_selected_style,'background': color2}
 
-blue_tab_style = {
-    'background': '#A7D1FE',
-    'color': 'black',
-    'border': '1px solid navy',
-    'font-size': '14px',
-    'font-weight': 600,
-    'font-family': 'Arial',
-    'border-radius': '4px',
-    'padding':'6px',
-}
+tab3_style = {**base_style,'background': color3}
+tab3_selected = {**base_selected_style,'background': color3}
 
-green_tab_style = {
-    'background': '#a6ed6f',
-    'color': 'black',
-    'border': '1px solid green',
-    'font-size': '14px',
-    'font-weight': 600,
-    'font-family': 'Arial',
-    'border-radius': '4px',
-    'padding':'6px',
-}
+tab4_style = {**base_style,'background': color4}
+tab4_selected = {**base_selected_style,'background': color4}
 
-tab_selected_style = {
-    'background': '#D3D3D3',
-    'color': 'black',
-    'border': '1px solid black',
-    'font-size': '14px',
-    'font-weight': 600,
-    'font-family': 'Arial',
-    'border-radius': '4px',
-    'padding':'6px',
-}
-
-plate_report_style_data_conditional = [
-    {
-        'if': {'state': 'active'},
-        'backgroundColor': '#FFFBB2',
-        'border': '1px solid #FFFBB2'
-    },
-    {
-        'if': {'state': 'selected'},
-        'backgroundColor': '#FFFBB2',
-        'border': '1px solid #FFFBB2'
-    },
-]
-
-
-pipette_style_data_conditional = [
-    {
-        'if': {'state': 'active'},
-        'backgroundColor': '#FFFBB2',
-        'border': '1px solid #FFFBB2'
-    },
-    {
-        'if': {'state': 'selected'},
-        'backgroundColor': '#FFFBB2',
-        'border': '1px solid #FFFBB2'
-    },
-]
+tab5_style = {**base_style,'background': color5}
+tab5_selected = {**base_selected_style,'background': color5}
 
 data_table_style_data_conditional = [
     {
         'if': {'state': 'active'},
-        'backgroundColor': '#cef786',
-        'border': '1px solid green',
+        'backgroundColor': color4_faded,
+        'border': '1px black',
     },
     {
         'if': {'state': 'selected'},
-        'backgroundColor': '#cef786',
-        'border': '1px solid green',
+        'backgroundColor': color4_faded,
+        'border': '1px black',
+    },]
+
+plate_report_style_data_conditional = [
+    {
+        'if': {'state': 'active'},
+        'backgroundColor': color1_faded,
+        'border': '1px black'
     },
-]
+    {
+        'if': {'state': 'selected'},
+        'backgroundColor': color1_faded,
+        'border': '1px black'
+    },]
 
+####################
+#
+# Read in files and format
+#
+####################
 
-#Fiddle with input data to correct format
+print("Reading in data. This can take a few minutes if processing many plates")
 df_results = pd.read_csv(args.input_dir+'/Final_results.txt', sep='\t', header = 0)
 df_results['Error'].fillna('', inplace=True)
 df_results['Well_zscore']=df_results['Well_zscore'].apply(lambda x:round(x,2))
 df_results['Relative_amplitude']=df_results['Relative_amplitude'].apply(lambda x:round(x,2))
+df_results['group'] = df_results['Assay_Plate'].apply(lambda x: df_results['Assay_Plate'].unique().tolist().index(x) // 16) #Assign group number to every 16 plates
+groups_df = df_results.loc[:, ['Assay_Plate', 'group']].drop_duplicates()
 df_curves = pd.read_csv(args.input_dir+'/Final_curves.txt', sep='\t', header = 0)
+df_curves = pd.merge(df_curves,groups_df, how = 'outer', on='Assay_Plate')
 df_curves['Error'].fillna('', inplace=True)
-df_plate_report = pd.read_csv(args.input_dir+'/Plate_report.txt', sep='\t', header = 0)
-df_pipette = pd.read_csv(args.input_dir+'/Potential_problems.txt', sep='\t', header = 0)
+plate_report_df = pd.read_csv(args.input_dir+'/Plate_report.txt', sep='\t', header = 0)
+pipette_df = pd.read_csv(args.input_dir+'/Potential_problems.txt', sep='\t', header = 0)
+print("Data read in. Let's goooo! ")
 
 ####################
 #
-# GENERATING DEFAULT DATA TABLE (TAB5)
+# Generate default hot table
 #
 ####################
 
-default_datatable = df_results[(df_results['Well_type'] != 'Control')&(df_results['Plate_status'] == 'OK')&(df_results['Error'] == '')]
-default_datatable = default_datatable.rename(columns = {'Well_zscore':'zscore'})
-default_datatable['zscore'] = default_datatable['zscore'].abs() #Convert values to absolute values for % calculations
-default_datatable['Max_ctrl_zscore_for_plate'] = default_datatable['Max_ctrl_zscore_for_plate'].abs()
-default_datatable = default_datatable[((default_datatable.zscore >= -default_datatable.Max_ctrl_zscore_for_plate))&((default_datatable.Relative_amplitude <= 1.5)&(default_datatable.Relative_amplitude >= 0.5))]
-default_datatable.sort_values('zscore',ascending=False, inplace= True)
-default_datatable = default_datatable.rename(columns = {'zscore':'Well_zscore'})
-default_datatable['Max_ctrl_zscore_for_plate']=default_datatable['Max_ctrl_zscore_for_plate'].apply(lambda x:round(x,2))
-default_datatable_count = default_datatable['Unique_key'].nunique()
+original_df  = df_results[(df_results['Well_type'] != 'Control')&(df_results['Plate_status'] == 'OK')&(df_results['Error'] == '')]
+small_df = original_df.loc[:, ['Source_Plate','Well','Subplot','Compound','Fraction','Final_Tm','Well_zscore', 'Relative_amplitude','Max_ctrl_zscore_for_plate','Min_ctrl_zscore_for_plate','Diff from ctrl avg','Unique_key','Unique_key_subplot','group']]
+small_df.loc[:,"Hit"] = np.where((small_df['Well_zscore'] > small_df['Max_ctrl_zscore_for_plate'])|
+                                 (small_df['Well_zscore'] < small_df['Min_ctrl_zscore_for_plate']),
+                                "Hit","Not a hit")
+filtered_df = small_df[((small_df.Hit == 'Hit'))&((small_df.Relative_amplitude <= 1.5)&(small_df.Relative_amplitude >= 0.5))]
+filtered_df = filtered_df.assign(**{'Diff from ctrl avg': filtered_df['Diff from ctrl avg'].apply(lambda x: round(x, 2))})
+filtered_df.loc[:,'Influence'] = np.where(filtered_df['Diff from ctrl avg'] > 0, "Stabilizer","Destabilizer")
+filtered_df_count = filtered_df.shape[0]
+filtered_stabilizer_count = filtered_df['Influence'].value_counts().get('Stabilizer', 0)
+filtered_destabilizer_count = filtered_df['Influence'].value_counts().get('Destabilizer', 0)
+filtered_df = filtered_df.sort_values('Well_zscore',ascending=False)
+new_cols = [col for col in filtered_df.columns if (col != 'Unique_key_subplot')&(col != 'Unique_key')] + ['Unique_key'] + ['Unique_key_subplot'] #Stick the unique key column at the end
+filtered_df = filtered_df[new_cols]
+
+####################
+#
+# FUNCTIONS
+#
+####################
+
+#Generate all ctrl distribution graph
+def generate_distribution_graph(y_axis_choice):
+    sub_df = df_results[(df_results['Well_type']=='Control')&(df_results['Final_decision']!='Removed')]
+    tm_max = np.nanmax(sub_df['Smooth_Tm'])
+    tm_min = np.nanmin(sub_df['Smooth_Tm'])
+    figure=px.violin(sub_df, x='Assay_Plate', y=y_axis_choice,color_discrete_sequence =[color2], height = 200,\
+                        labels={'Assay_Plate': 'Assay Plate', 'Smooth_Tm': 'Melting temp'},
+                        hover_data={'Source_Plate':True})\
+                        .update_xaxes(matches=None, tickfont=dict(size=6), tickangle=90)\
+                        .update_yaxes(title = 'Tm', range=[tm_min-5,tm_max+5])\
+                        .update_layout(margin=dict(l=20, r=20, t=20, b=20))
+    return figure
+
+def generate_selected_curve(selected_unique_key):
+    selected_curve_data = df_curves[df_curves['Unique_key'] == selected_unique_key]
+    plate = selected_unique_key.split('_')[0]+'_'+selected_unique_key.split('_')[1]+'_'+selected_unique_key.split('_')[2]
+    well = selected_unique_key.split('_')[3]
+    source_plate = selected_curve_data['Source_Plate'].unique()[0]
+    original_selected = selected_curve_data[selected_curve_data['Subplot'] == 'Original']
+    subplots_selected = selected_curve_data[(selected_curve_data['Subplot'] != 'Original')&(selected_curve_data['Final_decision'] == 'Pass')]
+    selected_curve_figure=px.scatter(subplots_selected, x='Temps', y='Smooth Fluorescence', color='Subplot', color_discrete_sequence=[color3,color4,color2,color1],
+                 labels={'Temps': 'Temperature', 'Smooth Fluorescence': 'Normalized fluorescence'},
+                hover_name='Well', hover_data={'Final_decision':False, 'Assay_Plate':False, 'Temps':False, 'Smooth Fluorescence':False, 'Error':True}, #Hover data (Tooltip in Spotfire)
+                render_mode = 'auto', height = 500, title = 'Plate '+source_plate+', Well '+well+"<br><sup> Assay Plate: "+plate+"</sup>")
+    selected_curve_figure.add_scatter(x=original_selected['Temps'], y=original_selected['Smooth Fluorescence'],line={'color':'#cacacf','dash':'dot'}, name = 'Original data')
+    selected_curve_figure.update_layout(title = {'font':{'size':15}})
+    selected_curve_figure.data = selected_curve_figure.data[::-1]
+    #selected_curve_figure.update_traces(marker_size=10)
+    return selected_curve_figure
+
+def generate_first_derivative_curve(selected_unique_key):
+    selected_curve_data = df_curves[df_curves['Unique_key'] == selected_unique_key]
+    avg_ctrl_Tm = df_results[df_results['Unique_key'] == selected_unique_key]['Avg_ctrl_melting_temp'].unique()[0]
+    well_Tms = df_results[(df_results['Unique_key'] == selected_unique_key)&(df_results['Final_decision'] == 'Pass')]['Final_Tm'].unique()
+    plate = selected_unique_key.split('_')[0]+'_'+selected_unique_key.split('_')[1]+'_'+selected_unique_key.split('_')[2]
+    well = selected_unique_key.split('_')[3]
+    source_plate = selected_curve_data['Source_Plate'].unique()[0]
+    #Generating first deriv of original data
+    orig_curve_coords = selected_curve_data[selected_curve_data["Subplot"] == 'Original']
+    orig_curve_coords = orig_curve_coords.drop_duplicates()
+    raw_x = orig_curve_coords["Temps"].values.tolist()
+    raw_y = orig_curve_coords["Smooth Fluorescence"].values.tolist()
+    subplot = orig_curve_coords["Subplot"].values.tolist()
+    y_grad = list(np.gradient(raw_y, raw_x))
+    orig_deriv_df = pd.DataFrame({'Temps': raw_x,'Smooth': raw_y,'1st_deriv': y_grad,'Subplot':subplot})
+    #Generating first deriv of subplots
+    subplots = selected_curve_data[(selected_curve_data['Subplot'] != 'Original')&(selected_curve_data['Final_decision'] == 'Pass')]
+    subplots = subplots.drop_duplicates()
+    subplots_x = subplots["Temps"].values.tolist()
+    subplots_y = subplots["Smooth Fluorescence"].values.tolist()
+    subplots_subplots = subplots["Subplot"].values.tolist()
+    subplots_y_grad = list(np.gradient(subplots_y, subplots_x))
+    subplot_deriv_df = pd.DataFrame({'Temps': subplots_x,'Smooth': subplots_y,'1st_deriv': subplots_y_grad,'Subplot':subplots_subplots})
+    #Drawing the plot
+    # 2. Draw the spliced subplots
+    fig = px.scatter(subplot_deriv_df, x='Temps', y='1st_deriv', color='Subplot', 
+                  color_discrete_sequence=[color3,color4,color2,color1],
+                  labels={'Temps': 'Temperature', '1st_deriv': 'DF/DT'})
+    # 3. Add in the 'original' curve as a line
+    fig.add_scatter(x=orig_deriv_df['Temps'], y=orig_deriv_df['1st_deriv'],line={'color':'#cacacf','dash':'dot'}, name = 'Original data')
+    # 4. Add Avg ctrl Tm line
+    fig.add_vline(x=avg_ctrl_Tm, line=dict(color='red', width=2, dash='dot'), name = 'Avg. ctrl Tm for plate')
+    # 5. Add well final Tms
+    for value in well_Tms:
+        fig.add_vline(x=value, line=dict(color='blue', width=1, dash='dash'), name = 'Tm(s) for selected well')
+    # 7. Add labels
+    fig.update_layout(title = "First derivative <br><sup> <span style='color:red'>Red:</span> Avg. ctrl Tm for plate, <span style='color:blue'>Blue:</span> Well Tm", xaxis_title='Temperature',yaxis_title='DF/DT')
+    fig.data = fig.data[::-1]
+    return fig
+
+def generate_all_curves(unique_key_list):
+    hit_curve_data_df = df_curves[df_curves['Unique_key'].isin(unique_key_list)]
+    num_rows = math.ceil(len(unique_key_list)/10)
+    height = 25*num_rows
+    facet_row_max_spacing = 3/height
+    all_curves_figure = px.scatter(hit_curve_data_df, x='Temps', y='Smooth Fluorescence', color='Subplot', color_discrete_sequence=['#cacacf',color3,color4,color2,color1],
+                        hover_name='Well', hover_data={'Final_decision':False, 'Assay_Plate':False, 'Temps':False, 'Smooth Fluorescence':False, 'Error':True, 'Ctrl_Tm_z-score':True}, #Hover data (Tooltip in Spotfire)
+                        facet_col='Unique_key', facet_col_wrap=5, facet_col_spacing=0.08,facet_row_spacing = facet_row_max_spacing,#Facet plots by plate and only allow 2 columns. Column spacing had to be adjusted to allow for individual y-axes
+                        render_mode = 'auto', height = height) #Height of plots is equal to half the number of plates (coz 2 columns) with each plot 300px high. Width will have to be adjusted
+    return all_curves_figure
+
+def generate_barplot(df,x_axis, color_by):
+    df_count = df.groupby(['Platename', 'Fraction']).size().reset_index(name='Count')
+    if color_by == 'Fraction':
+        if df_count['Fraction'].dtype == 'float64':
+            df_count[color_by] = df_count[color_by].astype(int).astype(str)
+        else:
+            df_count[color_by] = df_count[color_by].astype(str)
+    figure = px.bar(df_count, x=x_axis, y='Count', color=color_by, barmode='stack',
+                    labels={'Platename': 'Plate'})
+    if color_by == 'Fraction':
+        figure.update_xaxes(tickfont=dict(size=8), tickangle=90)
+    else:
+        figure.update_xaxes(tickfont=dict(size=12))
+    figure.update_layout(margin=dict(l=20, r=20, t=5, b=5), height=350) #Reduce enormous default margins
+    return figure
+
+def generate_scatterplot():
+    figure = px.strip(df_results, x = 'Platename',y = 'Final_Tm', color = 'Hit', color_discrete_sequence=[color2,color3,color4],
+                      labels={'Final_Tm': 'Melting temp', 'Platename': 'Plate'},
+                      hover_data={'Well':True, 'Well_zscore':True, 'Relative_amplitude':True,'Max_ctrl_zscore_for_plate':True,'Min_ctrl_zscore_for_plate':True,'Avg_ctrl_melting_temp':True,'Diff from ctrl avg':True})
+    figure.update_xaxes(tickfont=dict(size=8), tickangle=90)
+    figure.update_layout(margin=dict(l=20, r=20, t=5, b=5), height=350) #Reduce enormous default margins
+    figure.update_traces(marker_size=10)
+    return figure
+
+#Generate all control curves faceted by plate
+def generate_all_ctrls_graph(df):
+    no_plates = df['Assay_Plate'].nunique()
+    num_rows = math.ceil(no_plates/2)
+    height = 25*num_rows
+    facet_row_max_spacing = 6/height
+    figure=px.scatter(df, x='Temps', y='Smooth Fluorescence', color='Final_decision', color_discrete_map={'Pass':color2,'Failed':color4},\
+                                hover_name='Well', hover_data={'Source_Plate':True, 'Final_decision':False, 'Assay_Plate':False, 'Temps':False, 'Smooth Fluorescence':False, 'Error':True, 'Ctrl_Tm_z-score':True},\
+                                facet_col='Assay_Plate', facet_col_wrap=2, facet_col_spacing=0.06, facet_row_spacing=facet_row_max_spacing, render_mode = 'auto')
+    figure.update_yaxes(matches=None)
+    figure.update_xaxes(matches=None)
+    figure.for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True))
+    figure.for_each_xaxis(lambda xaxis: xaxis.update(showticklabels=True))
+    figure['layout']['height'] = 250*num_rows
+    return figure
+
+def generate_Tm_heatmap(df, facet_row_max_spacing):
+    figure=px.scatter(df, x='Column', y='Row', color='Final_Tm', hover_name='Compound', 
+                                color_continuous_scale=[color1,color2,color3,color4], color_continuous_midpoint=50,
+                                hover_data={'Platename':False, 'Fraction':True, 'Final_Tm':True,'Column':False, 'Row':False, 'Well':True, 'Error':True,'Unique_key':True, 'Well_zscore':True},
+                                facet_col='Platename', facet_col_wrap=1, facet_row_spacing=facet_row_max_spacing, 
+                                render_mode = 'auto')
+    return figure
+
+def generate_zscore_heatmap(df, facet_row_max_spacing):
+    figure=px.scatter(df, x='Column', y='Row', color='Well_zscore', hover_name='Compound', 
+                                color_continuous_scale=px.colors.diverging.Spectral_r, color_continuous_midpoint=0,
+                                hover_data={'Platename':False, 'Fraction':True, 'Final_Tm':True,'Column':False, 'Row':False, 'Well':True, 'Error':True,'Unique_key':True, 'Well_zscore':True}, 
+                                facet_col='Platename', facet_col_wrap=1, facet_row_spacing=facet_row_max_spacing, 
+                                render_mode = 'auto')
+    return figure
+
+def update_heatmap(figure,facet_row_max_spacing,num_rows):
+    figure.update_traces(marker={'symbol': 'square', 'size':25, 'line':{'color':'grey','width':1}})
+    figure.update_yaxes(autorange='reversed',showgrid=False, zeroline=False) #Get y-axis to go from A to Z, and remove all gridlines
+    figure.update_xaxes(showgrid=False, zeroline=False) #Remove all gridlines
+    figure.update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0)'}) #Make plot backgrounds transparent
+    figure.update_layout(coloraxis_colorbar = {'len':0.5, 'xanchor':'center', 'yanchor':'bottom','y':1+facet_row_max_spacing,'orientation':'h','ypad':0.8,'thicknessmode':'pixels', 'thickness':20})
+    figure.for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True)) #Put y-axis labels on all facet plots
+    figure.for_each_xaxis(lambda xaxis: xaxis.update(showticklabels=True)) #Put x-axis labels on all facet plots
+    tab3_height = 500*num_rows
+    figure['layout'].update(height = tab3_height,margin=dict(l=10, r=10, t=10, b=10), width = 700)
+    return figure
 
 ####################
 #
@@ -177,7 +295,8 @@ default_datatable_count = default_datatable['Unique_key'].nunique()
 #
 ####################
 
-app.layout = html.Div([html.H1('DSF Analysis Visualizations', style = {'background': '#e3e3e3','font-family': 'Arial','border-radius': '4px','border': f'1px solid #70706d','padding':'10px'}),
+app.layout = html.Div([
+    html.H1('ShiftScan Viewer', style = {'background': '#e3e3e3','font-family': 'Arial','padding':'20px'}),
     dcc.Tabs([
             #Result overview 
             dcc.Tab([
@@ -188,122 +307,89 @@ app.layout = html.Div([html.H1('DSF Analysis Visualizations', style = {'backgrou
                     html.H3('Plate report:',style = {'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'0px'}),
                     #Table
                     dash_table.DataTable(
-                        df_plate_report.to_dict('records'), 
-                        [{'name': i, 'id': i} for i in df_plate_report.columns],
+                        data = plate_report_df.to_dict('records'),
+                        columns = [{'name': i, 'id': i} for i in plate_report_df.columns],
                         id = 'plate_report_table',
                         sort_action='native',
                         export_format='xlsx',
                         style_data_conditional=plate_report_style_data_conditional, 
-                        style_as_list_view=True, style_cell={'fontSize':12, 'font-family':'Arial'}, style_header = {'backgroundColor': '#FFEF79','fontWeight': 'bold'})
-                    ], style = {'display':'inline-block','vertical-align':'top','width':'60%', 'height': '80%','margin-top':'30px','overflow-y':'scroll', 'margin-right': '50px'}),
+                        style_as_list_view=True, style_cell={'fontSize':12, 'font-family':'Arial'}, style_header = {'backgroundColor': color1,'fontWeight': 'bold'})
+                    ], style = {'display':'inline-block','vertical-align':'top','width':'75%', 'height': '80%','margin-top':'30px','overflow-y':'scroll', 'margin-right': '50px'}),
                 #Pipetting problems
                 html.Div([
                     #Header
                     html.H3('Possible pipetting issues:',style = {'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'0px'}),
                     #Table
                     dash_table.DataTable(
-                        df_pipette.to_dict('records'), 
-                        [{'name': i, 'id': i} for i in df_pipette.columns],
-                        id = 'pipette_issues_table',
-                        export_format='xlsx',
-                        style_data_conditional=pipette_style_data_conditional, 
-                        style_as_list_view=True, style_cell={'fontSize':12, 'font-family':'Arial'}, style_header = {'backgroundColor': '#FFEF79','fontWeight': 'bold'})
-                    ], style = {'display':'inline-block','vertical-align':'top','width':'20%', 'height': '80%','margin-top':'30px','overflow-y':'scroll'})
+                            data = pipette_df.to_dict('records'),
+                            columns = [{'name': i, 'id': i} for i in pipette_df.columns],
+                            id = 'pipette_issues_table',
+                            export_format='xlsx',
+                            style_data_conditional=plate_report_style_data_conditional, 
+                            style_as_list_view=True, style_cell={'fontSize':12, 'font-family':'Arial'}, style_header = {'backgroundColor': color1,'fontWeight': 'bold'})
+                    ], style = {'display':'inline-block','vertical-align':'top','width':'20%', 'height': '200px','margin-top':'30px','overflow-y':'scroll'})
                 ],
-            label='Plate overview', style=orange_tab_style, selected_style=tab_selected_style, value='tab-1'), #Plate overview tab style
+            label='Plate overview', style=tab1_style, selected_style=tab1_selected, value='tab-1'), #Plate overview tab style
+
             #CURVE TAB
             dcc.Tab([
                 html.Hr(style = {'margin-bottom':'0px','width': '100%', 'margin-top':'10px'}), #Break
                 #All ctrl Tm div
                 html.Div([
                         #Header
-                        html.H3('Distribution of all control Tms per plate:',style = {'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'0px'}),
+                        html.H4('Distribution of all control Tms per plate:',style = {'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'0px'}),
                         #Boxplot
-                        html.Div([dcc.Graph(id = 'all_control_boxes',
-                        figure=px.violin(df_results[(df_results['Well_type']=='Control')], x='Assay_Plate', y='Smooth_Tm',height = 200,
-                        labels={'Assay_Plate': 'Assay Plate', 'Smooth_Tm': 'Melting temp'}) 
-                        .update_xaxes(matches=None)
-                        .update_yaxes(range=[35,70])
-                        .update_layout(margin=dict(l=20, r=20, t=20, b=20)), #Free x-axis
-                        style = {'display':'inline-block','vertical-align':'top','width':'100%','height':200})],
+                        html.Div([dcc.Loading(dcc.Graph(id = 'all_control_boxes', figure = generate_distribution_graph('Smooth_Tm'),
+                            style = {'display':'inline-block','vertical-align':'top','width':'100%','height':200})
+                            ,type = 'dot',color = color2)],
                         id='curve_all_boxplots')
                         ],
                     style = {'display':'inline-block','vertical-align':'top','width':'50%','margin-top':'20px','overflow-y':'scroll'}),
                 #Clean ctrl tm div
                 html.Div([
                         #Header
-                        html.H3('Distribution of "clean" control Tms per plate:',style = {'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'0px'}),
+                        html.H4('Distribution of "clean" control Tms per plate:',style = {'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'0px'}),
                         #Boxplot
-                        html.Div([dcc.Graph(id = 'clean_control_boxes',
-                        figure=px.violin(df_results[(df_results['Well_type']=='Control')], x='Assay_Plate', y='Final_Tm',height = 200,
-                        labels={'Assay_Plate': 'Assay Plate', 'Final_Tm': 'Melting temp'}) 
-                        .update_xaxes(matches=None)
-                        .update_yaxes(range=[35,70])
-                        .update_layout(margin=dict(l=20, r=20, t=20, b=20)), #Free x-axis
-                        style = {'display':'inline-block','vertical-align':'top','width':'100%','height':200})],
+                        html.Div([dcc.Loading(dcc.Graph(id = 'clean_control_boxes', figure = generate_distribution_graph('Final_Tm'),
+                            style = {'display':'inline-block','vertical-align':'top','width':'100%','height':200})
+                            ,type = 'dot',color = color2)],
                         id='curve_clean_boxplots')
                         ],
                     style = {'display':'inline-block','vertical-align':'top','width':'50%','margin-top':'20px','overflow-y':'scroll'}), 
-                html.Hr(style = {'margin-bottom':'0px','width': '100%'}), #Break           
+                html.Hr(style = {'margin-bottom':'0px','width': '100%'}), #Break 
+                dcc.Dropdown(id = 'Choice of controls',
+                            options=[{'label': 'Plates: 1 - 16', 'value': 0}],
+                            value=0,
+                            style = {'display':'inline-block','vertical-align':'top','font-family': 'Arial', 'margin-bottom':'0px','margin-top':'5px','fontSize':12, 'width': '50%'}),          
                 #Curves
-                html.H3('Control curves:',style = {'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'20px'}),
-                html.Div([dcc.Graph(id = 'control_curves',
-                    figure=px.scatter(df_curves[(df_curves['Well_type']=='Control')&(df_curves['Subplot']!='Original')], x='Temps', y='Smooth Fluorescence', color='Final_decision', color_discrete_sequence=['#FABF73','#F06D4E','#3489eb'],
-                        hover_name='Well', hover_data={'Final_decision':False, 'Assay_Plate':False, 'Temps':False, 'Smooth Fluorescence':False, 'Error':True, 'Ctrl_Tm_z-score':True}, #Hover data (Tooltip in Spotfire)
-                        facet_col='Assay_Plate', facet_col_wrap=2, facet_col_spacing=0.06, #Facet plots by plate and only allow 2 columns. Column spacing had to be adjusted to allow for individual y-axes
-                        render_mode = 'auto', height = 250*(len(df_curves['Assay_Plate'].unique()))) #Height of plots is equal to half the number of plates (coz 2 columns) with each plot 500px high. Width will have to be adjusted
-                    .update_yaxes(matches=None) #Free y-axis
-                    .update_xaxes(matches=None) #Free x-axis
-                    .for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True)) #Put y-axis labels on all facet plots
-                    .for_each_xaxis(lambda xaxis: xaxis.update(showticklabels=True)), #Put x-axis labels on all facet plots
+                html.H4('Control curves:',style = {'font-family': 'Arial','margin-bottom':'5px', 'margin-top':'5px'}),
+                html.Div([dcc.Loading(dcc.Graph(id = 'control_curves',
                     style = {'display':'inline-block','vertical-align':'top', 'width': '100%','overflow-y':'scroll'})
-                ],id='curve_graphs')],
-            label='Control overview', style=red_tab_style, selected_style=tab_selected_style, value ='tab-2'),
+                ,type = 'dot',color = color2)],id='curve_graphs')],
+            label='Control overview', style=tab2_style, selected_style=tab2_selected, value ='tab-2'),
 
-            #MELTING TEMP PLATE OVERVIEW
+            #MELTING TEMP/Z-SCORE PLATE OVERVIEW
             dcc.Tab([
                 html.Hr(style = {'margin-bottom':'0px','width': '100%', 'margin-top':'10px'}), #Break
-                #Child 1: Plate maps of melting temps (Left of screen)
-                html.Div([dcc.Graph(id = 'Tm_plates',
-                    figure=px.scatter(df_results, x='Column', y='Row', color='Final_Tm', hover_name='Compound', 
-                        color_continuous_scale=px.colors.sequential.Oranges, 
-                        hover_data={'Final_Tm':True,'Column':False, 'Row':False, 'Well':True, 'Error':True,'Unique_key':True, 'Well_zscore':True}, 
-                        facet_col='Spotfire_Platename', facet_col_wrap=1, facet_row_spacing=0.03, 
-                        render_mode = 'auto', height = 500*(len(df_results['Spotfire_Platename'].unique())))
-                    .update_traces(marker={'symbol': 'square', 'size':25, 'line':{'color':'grey','width':1}})
-                    .update_yaxes(autorange='reversed',showgrid=False, zeroline=False) #Get y-axis to go from A to Z, and remove all gridlines
-                    .update_xaxes(showgrid=False, zeroline=False) #Remove all gridlines
-                    .update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0)'}) #Make plot backgrounds transparent
-                    .update_layout(coloraxis_colorbar = {'len':0.5, 'xanchor':'center', 'orientation':'h','ypad':5,'thicknessmode':'pixels', 'thickness':20})
-                    .for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True)) #Put y-axis labels on all facet plots
-                    .for_each_xaxis(lambda xaxis: xaxis.update(showticklabels=True)) #Put x-axis labels on all facet plots
-                    )],id='Tm_graphs',style = {'display':'inline-block','vertical-align':'top', 'width': '50%','overflow-y':'scroll', 'height':500}), #Plate graph style
-                #Child2: Selected curve (Right of screen)
+                html.Div([
+                        html.H3('Color plates by:',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px','display':'inline-block','vertical-align':'top','width':'50%'}),
+                        html.H3('Plate range:',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px','display':'inline-block','vertical-align':'top','width':'50%'},id = 'plate_range_header'),
+                        dbc.RadioItems(id = 'color_filter', 
+                                        options = [{'label':'Melting temp', 'value':'Final_Tm'},
+                                                    {'label':'Z-score', 'value':'Well_zscore'}], 
+                                                    value = 'Final_Tm',
+                                                    style = {'display':'inline-block','vertical-align':'top','font-family': 'Arial', 'margin-bottom':'5px','margin-top':'5px','fontSize':12, 'width': '50%'},
+                                                    inline = True),
+                        dcc.Dropdown(id = 'Choice of plates',
+                                        options=[{'label': 'Plates: 1 - 50', 'value': 0}],
+                                                value=0,
+                                                style = {'display':'inline-block','vertical-align':'top','font-family': 'Arial', 'margin-bottom':'5px','margin-top':'5px','fontSize':12, 'width': '50%'}),
+                        dcc.Loading(dcc.Graph(id = 'Tm_plates'),type = 'dot', color = color2),
+                            ], style = {'display':'inline-block','vertical-align':'top', 'width': '50%','overflow-y':'scroll', 'height':'600px'}),
+               #Child2: Selected curve (Right of screen)
                 html.Div([],id='popup',style = {'display':'inline-block','vertical-align':'top', 'width': '50%'})
-                ],label='Melting temp overview', style=purple_tab_style, selected_style=tab_selected_style, value ='tab-3'), #Melting temp tab style and other details
-            
-            #Z-SCORE TAB
-            dcc.Tab([
-                html.Hr(style = {'margin-bottom':'0px','width': '100%', 'margin-top':'10px'}), #Break
-                #Child 1: Plate maps of z-scores (Left of screen)
-                html.Div([dcc.Graph(id = 'Z_plates',
-                    figure=px.scatter(df_results, x='Column', y='Row', color='Well_zscore', hover_name='Compound', 
-                        color_continuous_scale=px.colors.diverging.Spectral_r, color_continuous_midpoint=0,
-                        hover_data={'Final_Tm':True,'Column':False, 'Row':False, 'Well':True, 'Error':True,'Unique_key':True, 'Well_zscore':True}, 
-                        facet_col='Spotfire_Platename', facet_col_wrap=1, facet_row_spacing=0.03, 
-                        render_mode = 'auto', height = 500*(len(df_results['Spotfire_Platename'].unique())))
-                    .update_traces(marker={'symbol': 'square', 'size':25, 'line':{'color':'grey','width':1}})
-                    .update_yaxes(autorange='reversed',showgrid=False, zeroline=False) #Get y-axis to go from A to Z, and remove all gridlines
-                    .update_xaxes(showgrid=False, zeroline=False) #Remove all gridlines
-                    .update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0)'}) #Make plot backgrounds transparent
-                    .update_layout(coloraxis_colorbar = {'len':0.5, 'xanchor':'center', 'orientation':'h','ypad':5,'thicknessmode':'pixels', 'thickness':20})
-                    .for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True)) #Put y-axis labels on all facet plots
-                    .for_each_xaxis(lambda xaxis: xaxis.update(showticklabels=True)) #Put x-axis labels on all facet plots
-                    )],id='Z_graphs',style = {'display':'inline-block','vertical-align':'top', 'width': '50%','overflow-y':'scroll', 'height':500}), #Plate graph style
-                #Child2: Selected curve (Right of screen)
-                html.Div([],id='popup2',style = {'display':'inline-block','vertical-align':'top', 'width': '50%'})
-                ],label='Z-score overview', style=blue_tab_style, selected_style=tab_selected_style, value ='tab-4'), #Melting temp tab style and other details
-            
+                ],label='Melting temp overview', style=tab3_style, selected_style=tab3_selected, value ='tab-3'), 
+
             #HIT TABLE TAB
             dcc.Tab([
                 html.Hr(style = {'margin-bottom':'0px','width': '100%', 'margin-top':'10px'}), #Break
@@ -311,61 +397,81 @@ app.layout = html.Div([html.H1('DSF Analysis Visualizations', style = {'backgrou
                 html.Div([
                         #Data table
                         html.Div([
-                        html.Label("Total hits: "+str(default_datatable_count), style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'font-size': '20px', 'color':'dark green'}, id = 'hits_header'),
+                        html.Label("Total hits: "+str(filtered_df_count), style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'font-size': '20px', 'color':'dark green'}, id = 'hits_header'),
+                        html.Hr(style = {'margin-bottom':'0px','width': '2%', 'margin-top':'2px', 'border':'0px white'}), #Break
+                        html.Label("Stabilizers: "+str(filtered_stabilizer_count), style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'font-size': '16px'}, id = 'stabilizer_header'),
+                        html.Hr(style = {'margin-bottom':'0px','width': '2%', 'margin-top':'2px', 'border':'0px white'}), #Break
+                        html.Label("Destabilizers: "+str(filtered_destabilizer_count), style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'font-size': '16px'}, id = 'destabilizer_header'),
+                        html.Hr(style = {'margin-bottom':'0px','width': '2%', 'margin-top':'2px', 'border':'15px white'}), #Break
                         dash_table.DataTable(
-                            default_datatable.to_dict('records'), 
-                            [{'name': i, 'id': i} for i in default_datatable.loc[:, ['Source_Plate','Well','Subplot','Compound','Fraction','Final_Tm','Well_zscore','Relative_amplitude','Max_ctrl_zscore_for_plate','Unique_key']]],
+                            data = filtered_df.to_dict('records'),
+                            columns = [{'name': i, 'id': i} for i in filtered_df.columns],
                             id = 'results_table_datatable',
-                            hidden_columns=['Unique_key','Max_ctrl_zscore_for_plate'],
+                            hidden_columns=['Max_ctrl_zscore_for_plate','Hit','Min_ctrl_zscore_for_plate','group'], 
                             css=[{'selector': '.show-hide', 'rule': 'display: none'},{'selector':'.export','rule': 'margin:5px'}],
                             row_deletable=True,
                             sort_action='native',
                             export_format='xlsx',
                             style_data_conditional=data_table_style_data_conditional, 
-                            style_table = {'height':'250px','overflow-y':'scroll'},
-                            style_as_list_view=True, style_cell={'fontSize':12, 'font-family':'Arial'}, style_header = {'backgroundColor': '#a6ed6f','fontWeight': 'bold'}),#Styling of table
+                            style_table = {'height':'200px','overflow-y':'scroll'},
+                            style_as_list_view=True, style_cell={'fontSize':12, 'font-family':'Arial'}, style_header = {'backgroundColor': color4,'fontWeight': 'bold'}),#Styling of table
                         ], id = 'results_table'),
+                        html.Hr(style = {'margin-bottom':'0px','width': '2%', 'margin-top':'2px', 'border':'15px white'}), #Break
                         #Generate all hit graphs button
-                        html.Div([html.Button('Generate all graphs', id='generate', n_clicks=None, style = {'margin-top':'20px', 'margin-right': '20px'})], style = {'display':'inline-block','vertical-align':'top'}),
+                        html.Div([html.Button('Generate all curves', id='generate', n_clicks=None, style = {'width':'200px','margin-top':'10px', 'margin-right': '20px', 'backgroundColor': color1})], style = {'display':'inline-block','vertical-align':'top'}),
+                        #Generate summary graphs button
+                        html.Div([html.Button('Generate summary graphs', id='summary_graphs', n_clicks=None, style = {'width':'200px','margin-top':'10px', 'margin-right': '20px', 'backgroundColor': color2})],style = {'display':'inline-block','vertical-align':'top'}),
                         #Clear all graphs button
-                        html.Div([html.Button('Clear all graphs', id='clear', n_clicks=0, style = {'margin-top':'20px'})],style = {'display':'inline-block','vertical-align':'top'}),
+                        html.Div([html.Button('Clear', id='clear', n_clicks=None, style = {'width':'200px','margin-top':'10px', 'margin-right': '80px', 'backgroundColor': color3})],style = {'display':'inline-block','vertical-align':'top'})
                         ], 
                     id='left_panel',
-                    style = {'display':'inline-block','vertical-align':'top', 'width': '50%','overflow-y':'scroll','overflow-x':'scroll', 'height':'50%', 'padding':'10px','margin-top':'5px'}), #Styling of table container
+                    style = {'display':'inline-block','vertical-align':'top', 'width': '55%','overflow-y':'scroll','overflow-x':'scroll', 'height':'50%', 'padding':'10px','margin-top':'5px'}), #Styling of table container
                 
                 #Child B: Cut off boxes and pop up graph
                 html.Div([
                     #Child 1
                     html.Div([
                                 #Child 1.1: Main z-score header
-                                html.H4('% beyond ctrl z-score range:',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px'}),#
+                                html.H5('% beyond ctrl z-score range:',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px'}),#
                                 #Child 1.2: Upper z-score cutoff header and box
                                 html.Div([
-                                        html.H5('Cutoff:',style = {'font-family': 'Arial','margin-bottom':'5px','margin-top':'7px'}),#
+                                        html.H6('Cutoff:',style = {'font-family': 'Arial','margin-bottom':'5px','margin-top':'7px'}),#
                                         dcc.Input(id='relative_zscore_cutoff', name = 'Cutoff', type='number', value = 0,style = {'font-family': 'Arial','width':'50px','margin-top':'5px'})],#
                                     style = {'display':'inline-block','vertical-align':'top', 'margin-top':'0px', 'margin-bottom':'5px'}),#Child 1.2 style
-                            ],style = {'display':'inline-block','vertical-align':'top', 'width':'49%', 'margin-top':'0px', 'margin-bottom':'15px'}), #Child 1 style
+                            ],style = {'display':'inline-block','vertical-align':'top', 'width':'30%', 'margin-top':'0px', 'margin-bottom':'15px'}), #Child 1 style
                     #Child 2
                     html.Div([
                             #Child 2.1: Main amplitude header
-                            html.H4('Relative amplitude cutoffs:',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px'}),
+                            html.H5('Relative amplitude cutoffs:',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px'}),
+                            html.H6('*The relative amplitude of the hit must be between these two values',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px'}),
                             #Child 2.2.: Upper amplitude cutoff header and box
                             html.Div([
-                                    html.H5('Upper cutoff:',style = {'font-family': 'Arial','margin-bottom':'5px','margin-top':'7px'}),#
+                                    html.H6('Upper cutoff:',style = {'font-family': 'Arial','margin-bottom':'5px','margin-top':'7px'}),#
                                     dcc.Input(id='upper_limit_amp', name = 'Upper cutoff', type='number', value = 1.5,style = {'font-family': 'Arial','width':'50px','margin-top':'5px'})],#
                                 style = {'display':'inline-block','vertical-align':'top', 'margin-top':'0px', 'margin-bottom':'5px'}),#Child 2.2 style
                             #Child 2.3: Lower amplitude cutoff header and box
                             html.Div([
-                                    html.H5('Lower cutoff:',style = {'font-family': 'Arial', 'margin-bottom':'5px','margin-top':'7px'}),#
+                                    html.H6('Lower cutoff:',style = {'font-family': 'Arial', 'margin-bottom':'5px','margin-top':'7px'}),#
                                     dcc.Input(id='lower_limit_amp', name = 'Lower cutoff', type='number', value = 0.5, style = {'font-family': 'Arial', 'width':'50px','margin-top':'5px'})],#
                                 style = {'display':'inline-block','vertical-align':'top', 'margin-top':'0px', 'margin-bottom':'5px','margin-left': '30px'}), #Child 2.3 style
-                            ],style = {'display':'inline-block','vertical-align':'top', 'width':'49%', 'margin-top':'0px', 'margin-bottom':'5px'}),#Child 2 style
-                        #Submit button
-                    #Child 3: Submit button
+                            ],style = {'display':'inline-block','vertical-align':'top', 'width':'40%', 'margin-top':'0px', 'margin-bottom':'5px'}), #Child 2 style
+                    #Child 3
+                    html.Div([
+                            dbc.RadioItems(id = 'hit_filter', 
+                                            options = [
+                                                    {'label':'All hits', 'value':'all'},
+                                                    {'label':'Only stabilizers', 'value':'stabilizers'},
+                                                    {'label':'Only destabilizers', 'value':'destabilizers'},
+                                                    ], value = 'all',
+                                                    style = {'font-family': 'Arial', 'margin-bottom':'5px','margin-top':'7px','fontSize':12})
+                            ],
+                            style = {'display':'inline-block','vertical-align':'top', 'width':'30%', 'margin-top':'0px', 'margin-bottom':'5px'}),
+                    #Submit button
+                    #Child 4: Submit button
                     html.Div([html.Button('Update', id='submit', n_clicks=0)]),
-                    #Child 4: Horizontal break
+                    #Child 5: Horizontal break
                     html.Hr(style = {'margin-bottom':'0px','width': '100%'}),
-                    #Child 5: POPUP GRAPH
+                    #Child 6: POPUP GRAPH
                     html.Div([
                         html.Div([],id = 'popup3',style = {'display':'inline-block','vertical-align':'top', 'width':'50%'}),
                         html.Div([],id = 'popup4',style = {'display':'inline-block','vertical-align':'top', 'width':'50%'}),
@@ -373,126 +479,223 @@ app.layout = html.Div([html.H1('DSF Analysis Visualizations', style = {'backgrou
                         ],id='popup3_div',style = {'width': '100%', 'margin-top':'0px', 'padding':'5px'})
                         ],
                     id='control_boxes', #Child B ID
-                    style = {'display':'inline-block','vertical-align':'top', 'width': '45%', 'overflow-x':'scroll', 'margin-top': '20px'}), #Child B style
+                    style = {'display':'inline-block','vertical-align':'top', 'width': '40%', 'overflow-x':'scroll', 'margin-top': '20px'}), #Child B style
                 
                 #Child C: All graphs for hits
-                html.Div([],id = 'all_graphs_div', style = {'height':'500px','overflow-y':'scroll', 'width': '45%'})
-
-                ],label='Hit list', style=green_tab_style, selected_style=tab_selected_style, value ='tab-5') #Tab div
+                html.Div([],id = 'all_graphs_div', style = {'width': '95%'})
+                ],label='Hit list', style=tab4_style, selected_style=tab4_selected, value ='tab-4'), #Tab div
             ],id ='tabs',value = 'tab-0',vertical =False, style = {'width':'100%'}) #All tabs style and other details
-])
+],id = 'page')
 
 ####################
-#
-# FUNCTIONS
-#
+#TAB 1 visualizations
 ####################
-def generate_selected_curve(selected_unique_key):
-    selected_curve_data = df_curves[df_curves['Unique_key'] == selected_unique_key]
-    plate = selected_unique_key.split('_')[0]+'_'+selected_unique_key.split('_')[1]+'_'+selected_unique_key.split('_')[2]
-    well = selected_unique_key.split('_')[3]
-    source_plate = selected_curve_data['Source_Plate'].unique()[0]
-    original_selected = selected_curve_data[selected_curve_data['Subplot'] == 'Original']
-    subplots_selected = selected_curve_data[selected_curve_data['Subplot'] != 'Original']
-    selected_curve_figure=px.scatter(subplots_selected, x='Temps', y='Smooth Fluorescence', color='Subplot', color_discrete_sequence=["#64960c","#abd95b","#4d7804"],
-                 labels={'Temps': 'Temperature', 'Smooth Fluorescence': 'Normalized fluorescence'},
-                hover_name='Well', hover_data={'Final_decision':False, 'Assay_Plate':False, 'Temps':False, 'Smooth Fluorescence':False, 'Error':True}, #Hover data (Tooltip in Spotfire)
-                render_mode = 'auto', height = 500, title = 'Selected: Plate '+source_plate+', Well '+well+"<br><sup> Assay Plate: "+plate+"</sup>")
-    selected_curve_figure.add_scatter(x=original_selected['Temps'], y=original_selected['Smooth Fluorescence'],line={'color':'grey','dash':'dot'}, name = 'Original data')
-    selected_curve_figure.update_layout(title = {'font':{'size':15}})
-    return selected_curve_figure
-
-def generate_first_derivative_curve(selected_unique_key):
-    selected_curve_data = df_curves[df_curves['Unique_key'] == selected_unique_key]
-    avg_ctrl_Tm = df_results[df_results['Unique_key'] == selected_unique_key]['Avg_ctrl_melting_temp'].unique()[0]
-    well_Tm = df_results[df_results['Unique_key'] == selected_unique_key]['Final_Tm'].unique()[0]
-    plate = selected_unique_key.split('_')[0]+'_'+selected_unique_key.split('_')[1]+'_'+selected_unique_key.split('_')[2]
-    well = selected_unique_key.split('_')[3]
-    source_plate = selected_curve_data['Source_Plate'].unique()[0]
-    raw_x = selected_curve_data["Temps"].values.tolist()
-    raw_y = selected_curve_data["Smooth Fluorescence"].values.tolist()
-    subplot = selected_curve_data["Subplot"].values.tolist()
-    y_grad = list(np.gradient(raw_y, raw_x))
-    deriv_df = pd.DataFrame({'Temps': raw_x,'Smooth': raw_y,'1st_deriv': y_grad,'Subplot':subplot})
-    #Drawing the plot
-    # 1. Seprate out data (original to be drawn as line, others as points)
-    original_1st_deriv = deriv_df[deriv_df['Subplot'] == 'Original']
-    subplots_1st_deriv = deriv_df[deriv_df['Subplot'] != 'Original']
-    # 2. Draw the 'original' curve as a line
-    fig = px.scatter(subplots_1st_deriv, x='Temps', y='1st_deriv', color='Subplot', 
-                  color_discrete_sequence=["#64960c","#abd95b","#4d7804"],
-                  labels={'Temps': 'Temperature', '1st_deriv': 'DF/DT'})
-    # 3. Add in spliced subplots
-    fig.add_scatter(x=original_1st_deriv['Temps'], y=original_1st_deriv['1st_deriv'],line={'color':'grey','dash':'dot'}, name = 'Original data')
-    # 4. Add Avg ctrl Tm line
-    fig.add_vline(x=avg_ctrl_Tm, line=dict(color='red', width=1, dash='dash'), name = 'Avg. ctrl Tm for plate')
-    # 5. Add well final Tm
-    fig.add_vline(x=well_Tm, line=dict(color='blue', width=1, dash='dash'), name = 'Tm for selected well')
-    # 6. Reorder figure data so the line is at the back
-    fig.data = (fig.data[1],fig.data[0])
-    # 7. Add labels
-    fig.update_layout(title = "First derivative <br><sup> <span style='color:red'>Red:</span> Avg. ctrl Tm for plate, <span style='color:blue'>Blue:</span> Well Tm", xaxis_title='Temperature',yaxis_title='DF/DT')
-    return fig
-
-def generate_all_curves(unique_key_list):
-    hit_curve_data_df = df_curves[df_curves['Unique_key'].isin(unique_key_list)]
-    num_rows = math.ceil(len(unique_key_list)/4)
-    height = 50*num_rows
-    facet_row_max_spacing = 6/height
-    all_curves_figure = px.scatter(hit_curve_data_df, x='Temps', y='Smooth Fluorescence', color='Subplot', color_discrete_sequence=['#FABF73','#F06D4E'],
-                        hover_name='Well', hover_data={'Final_decision':False, 'Assay_Plate':False, 'Temps':False, 'Smooth Fluorescence':False, 'Error':True, 'Ctrl_Tm_z-score':True}, #Hover data (Tooltip in Spotfire)
-                        facet_col='Unique_key', facet_col_wrap=2, facet_col_spacing=0.08,facet_row_spacing = facet_row_max_spacing,#Facet plots by plate and only allow 2 columns. Column spacing had to be adjusted to allow for individual y-axes
-                        render_mode = 'auto', height = height) #Height of plots is equal to half the number of plates (coz 2 columns) with each plot 300px high. Width will have to be adjusted
-    return all_curves_figure
-
-
-####################
-#
-# CALLBACKS
-#
-####################
-
-#Render curve graph for selected data in Melting temp tab
-@app.callback(
-    Output('popup', 'children'),
-    [Input('Tm_plates', 'clickData')]
-)
-def update_popup(clickData):
-    if clickData:
-        selected_unique_key = clickData['points'][0]['customdata'][3]
-        curve_figure = generate_selected_curve(selected_unique_key)
-        graph_object = dcc.Graph(id = 'selected_curve',figure=curve_figure)
-        return graph_object
-    else:
-        return None
-
-#Render curve graph for selected data in Z score tab
-@app.callback(
-    Output('popup2', 'children'),
-    [Input('Z_plates', 'clickData')]
-)
-def update_popup2(clickData):
-    if clickData:
-        selected_unique_key = clickData['points'][0]['customdata'][3]
-        curve_figure = generate_selected_curve(selected_unique_key)
-        graph_object = dcc.Graph(id = 'selected_curve',figure=curve_figure)
-        return graph_object
-    else:
-        return None
-
 
 #Highlight entire row in plate report when selected
 @app.callback(
     Output('plate_report_table', 'style_data_conditional'),
     [Input('plate_report_table', 'active_cell')],
-    State('plate_report_table', 'data')
-)
+    State('plate_report_table', 'data'))
 def update_plate_report_row_color(active,table_data):
     style_plate = plate_report_style_data_conditional.copy()
     if active:
-        style_plate.append({'if': {'row_index': active['row']}, 'backgroundColor': '#FFFBB2','border': '1px solid #FFFBB2'},)
-        seleted_row_data = table_data[active['row']]
+        style_plate.append({'if': {'row_index': active['row']}, 'backgroundColor': color1_faded,'border': '1px black'},)
+        selected_row_data = table_data[active['row']]
         return style_plate
+
+#Highlight entire row in plate report when selected
+@app.callback(
+    Output('pipette_issues_table', 'style_data_conditional'),
+    [Input('pipette_issues_table', 'active_cell')],
+    State('pipette_issues_table', 'data'))
+def update_pipette_issues_row_color(active,table_data):
+    style_plate = plate_report_style_data_conditional.copy()
+    if active:
+        style_plate.append({'if': {'row_index': active['row']}, 'backgroundColor': color1_faded,'border': '1px black'},)
+        selected_row_data = table_data[active['row']]
+        return style_plate
+
+####################
+#TAB 2 visualizations
+####################
+
+@app.callback(
+    Output('Choice of controls', 'options'),
+    Input('tabs', 'value'))
+def enable_options(tabValue):
+    if tabValue == 'tab-2':
+        no_plates = df_results['Assay_Plate'].nunique()
+        options = []
+        for i in range(0, no_plates, 16):
+            label = f"Plates: {i + 1} - {min(i + 16, no_plates)}"
+            value = i // 16
+            options.append({'label': label, 'value': value})
+        return options
+    else:
+        raise PreventUpdate
+
+#Generate ctrl curves
+@app.callback(
+    Output('control_curves','figure'),
+    [Input('tabs','value'),
+    Input('Choice of controls', 'value')])
+def generate_curves(tabValue, dropdown_choice):
+    if tabValue == 'tab-2':
+        subdata = df_curves[(df_curves['Well_type']=='Control')&(df_curves['Subplot']!='Original')&(df_curves['Final_decision']!='Removed')]
+        list_of_subdataframes = [d for _, d in subdata.groupby('group')] #Separate plates into groups of 16 plates
+        chosen_df = list_of_subdataframes[dropdown_choice]
+        figure = generate_all_ctrls_graph(chosen_df)
+        return figure
+    else:
+        raise PreventUpdate
+
+####################
+#TAB 3 visualizations
+####################
+
+@app.callback(
+    Output('Choice of plates', 'options'),
+    Input('tabs', 'value'))
+def enable_options(tabValue):
+    if tabValue == 'tab-3':
+        no_plates = df_results['Assay_Plate'].nunique()
+        options = []
+        for i in range(0, no_plates, 16):
+            label = f"Plates: {i + 1} - {min(i + 16, no_plates)}"
+            value = i // 16
+            options.append({'label': label, 'value': value})
+        return options
+    else:
+        raise PreventUpdate
+
+#Generate heatmaps of plates
+@app.callback(
+    Output('Tm_plates','figure'),
+    [Input('color_filter','value'),
+    Input('tabs','value'),
+    Input('Choice of plates', 'value')])
+def generate_heatmaps(color_choice,tabValue, dropdown_choice):
+    if tabValue == 'tab-3':
+        no_plates = df_results['Assay_Plate'].nunique()
+        subdata = df_results[(df_results['Final_decision']!='Removed')]
+        if no_plates <= 16:
+            num_rows = math.ceil(no_plates)
+            height = 50*num_rows
+            facet_row_max_spacing = 6/height
+            if color_choice == "Final_Tm":
+                figure = generate_Tm_heatmap(subdata, facet_row_max_spacing)
+            elif color_choice == "Well_zscore":
+                figure= generate_zscore_heatmap(subdata, facet_row_max_spacing)
+            updated_figure = update_heatmap(figure, facet_row_max_spacing,num_rows)
+            return updated_figure
+        else:
+            list_of_subdataframes = [d for _, d in subdata.groupby('group')] #Separate plates into groups of 16 plates
+            chosen_df = list_of_subdataframes[dropdown_choice]
+            sub_no_plates = chosen_df['Assay_Plate'].nunique()
+            sub_num_rows = math.ceil(sub_no_plates)
+            sub_height = 50*sub_num_rows
+            facet_row_max_spacing = 6/sub_height
+            if color_choice == "Final_Tm":
+                figure = generate_Tm_heatmap(chosen_df, facet_row_max_spacing)
+            elif color_choice == "Well_zscore":
+                figure= generate_zscore_heatmap(chosen_df, facet_row_max_spacing)
+            updated_figure = update_heatmap(figure, facet_row_max_spacing,sub_num_rows)
+            return updated_figure
+    else:
+        raise PreventUpdate
+
+#Render curve graph for selected data in Melting temp tab
+@app.callback(
+    Output('popup', 'children'),
+    Input('Tm_plates', 'clickData'))
+def update_popup(clickData):
+    if clickData:
+        selected_unique_key = clickData['points'][0]['customdata'][5]
+        curve_figure = generate_selected_curve(selected_unique_key)
+        graph_object = dcc.Graph(id = 'selected_curve',figure=curve_figure)
+        return graph_object
+    else:
+        return None
+
+####################
+#TAB 4 visualizations
+####################
+
+#Update hit table based on input box values
+@app.callback(
+    Output('results_table', 'children'),
+    Input('submit', 'n_clicks'),
+    Input('results_table_datatable', 'data_previous'),
+    State('results_table_datatable', 'data'),
+    State('relative_zscore_cutoff', 'value'),
+    State('lower_limit_amp', 'value'),
+    State('upper_limit_amp', 'value'),
+    State('hit_filter','value'),
+    State('results_table_datatable', 'derived_viewport_data'),
+    prevent_initial_call=True)
+def update_hit_table(n_clicks, previous, current, zscore_cutoff, lower_value_amp, upper_value_amp, hit_option, view):
+    if ((n_clicks < 1)&(previous is None)) | ((n_clicks >= 1)&(previous is None)) :
+        original_df  = df_results[(df_results['Well_type'] != 'Control')&(df_results['Plate_status'] == 'OK')&(df_results['Error'] == '')]
+        small_df = original_df.loc[:, ['Source_Plate','Well','Subplot','Compound','Fraction','Final_Tm','Well_zscore', 'Relative_amplitude','Max_ctrl_zscore_for_plate','Min_ctrl_zscore_for_plate','Diff from ctrl avg','Unique_key','Unique_key_subplot']]
+        cutoff = zscore_cutoff/100
+        small_df.loc[:,"Hit"] = np.where((small_df['Well_zscore'] > small_df['Max_ctrl_zscore_for_plate'] + ((small_df['Max_ctrl_zscore_for_plate'].abs())*cutoff))|
+                                         (small_df['Well_zscore'] < small_df['Min_ctrl_zscore_for_plate'] - ((small_df['Min_ctrl_zscore_for_plate'].abs())*cutoff)),
+                                        "Hit","Not a hit")
+        filtered_df = small_df[((small_df.Hit == 'Hit'))&((small_df.Relative_amplitude <= upper_value_amp)&(small_df.Relative_amplitude >= lower_value_amp))]
+        filtered_df = filtered_df.assign(**{'Diff from ctrl avg': filtered_df['Diff from ctrl avg'].apply(lambda x: round(x, 2))})
+        filtered_df.loc[:,'Influence'] = np.where(filtered_df['Diff from ctrl avg'] > 0, "Stabilizer","Destabilizer")
+        if hit_option == 'stabilizers':
+            filtered_df = filtered_df[filtered_df['Influence'] == 'Stabilizer']
+        elif hit_option == 'destabilizers':
+            filtered_df = filtered_df[filtered_df['Influence'] == 'Destabilizer']
+        else:
+            pass
+        filtered_df_count = filtered_df.shape[0]
+        filtered_stabilizer_count = filtered_df['Influence'].value_counts().get('Stabilizer', 0)
+        filtered_destabilizer_count = filtered_df['Influence'].value_counts().get('Destabilizer', 0)
+        filtered_df = filtered_df.sort_values('Well_zscore',ascending=False)
+        new_cols = [col for col in filtered_df.columns if (col != 'Unique_key_subplot')&(col != 'Unique_key')] + ['Unique_key'] + ['Unique_key_subplot'] #Stick the unique key column at the end
+        filtered_df = filtered_df[new_cols]
+        data_table = dash_table.DataTable(filtered_df.to_dict('records'), [{'name': i, 'id': i} for i in filtered_df.columns], 
+                id = 'results_table_datatable',
+                hidden_columns=['Max_ctrl_zscore_for_plate','Hit','Min_ctrl_zscore_for_plate','group'], 
+                style_as_list_view=True, 
+                row_deletable=True, 
+                sort_action='native',
+                export_format='xlsx',
+                style_table = {'height':'250px','overflow-y':'scroll'},
+                style_cell={'fontSize':12, 'font-family':'Arial'},
+                css=[{"selector": ".show-hide", "rule": "display: none"}], 
+                style_header = {'backgroundColor': color4,'fontWeight': 'bold'})
+        header = html.Label("Total hits: "+str(filtered_df_count), style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'font-size': '20px', 'color':'dark green'}, id = 'hits_header')
+        break1 = html.Hr(style = {'margin-bottom':'0px','width': '2%', 'margin-top':'2px', 'border':'0px white'})
+        stabilizers = html.Label("Stabilizers: "+str(filtered_stabilizer_count), style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'font-size': '16px'}, id = 'stabilizer_header')
+        break2 = html.Hr(style = {'margin-bottom':'0px','width': '2%', 'margin-top':'2px', 'border':'0px white'})
+        destabilizers = html.Label("Destabilizers: "+str(filtered_destabilizer_count), style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'font-size': '16px'}, id = 'destabilizer_header')
+        return header,break1,stabilizers,break2,destabilizers,data_table
+    else: #User change to datatable (e.g. delete row)
+        current_df = pd.DataFrame(current)
+        current_df.loc[:,'Influence'] = np.where(current_df['Diff from ctrl avg'] > 0, "Stabilizer","Destabilizer")
+        filtered_df_count = current_df.shape[0]
+        filtered_stabilizer_count = current_df['Influence'].value_counts().get('Stabilizer', 0)
+        filtered_destabilizer_count = current_df['Influence'].value_counts().get('Destabilizer', 0)
+        data_table = dash_table.DataTable(current_df.to_dict('records'), [{'name': i, 'id': i} for i in current_df.columns], 
+                id = 'results_table_datatable',
+                hidden_columns=['Max_ctrl_zscore_for_plate','Hit','Min_ctrl_zscore_for_plate','group'], 
+                style_as_list_view=True, 
+                row_deletable=True, 
+                sort_action='native',
+                export_format='xlsx',
+                style_table = {'height':'250px','overflow-y':'scroll'},
+                style_cell={'fontSize':12, 'font-family':'Arial'},
+                css=[{"selector": ".show-hide", "rule": "display: none"}],  
+                style_header = {'backgroundColor': '#a6ed6f','fontWeight': 'bold'})
+        header = html.Label("Total hits: "+str(filtered_df_count), style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'font-size': '20px', 'color':'dark green'}, id = 'hits_header')
+        break1 = html.Hr(style = {'margin-bottom':'0px','width': '2%', 'margin-top':'2px', 'border':'0px white'})
+        stabilizers = html.Label("Stabilizers: "+str(filtered_stabilizer_count), style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'font-size': '16px'}, id = 'stabilizer_header')
+        break2 = html.Hr(style = {'margin-bottom':'0px','width': '2%', 'margin-top':'2px', 'border':'0px white'})
+        destabilizers = html.Label("Destabilizers: "+str(filtered_destabilizer_count), style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'font-size': '16px'}, id = 'destabilizer_header')
+        return header,break1,stabilizers,break2,destabilizers,data_table
 
 #Highlight entire row in results Datatable when selected and produce pop up graph
 @app.callback(
@@ -502,8 +705,7 @@ def update_plate_report_row_color(active,table_data):
     Output('clear_pop_up_div','hidden')],
     [Input('results_table_datatable', 'active_cell'),
     Input('clear_popup','n_clicks')],
-    State('results_table_datatable', 'data')
-)
+    State('results_table_datatable', 'data'))
 def update_selected_row_color(active,n_clicks, table_data):
     style = data_table_style_data_conditional.copy()
     ctx = callback_context
@@ -512,13 +714,14 @@ def update_selected_row_color(active,n_clicks, table_data):
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
     if trigger_id == 'clear_popup':
         if n_clicks > 0:
-            style.append({'if': {'row_index': active['row']}, 'backgroundColor': '#cef786','border': '1px solid green'},)
+            style.append({'if': {'row_index': active['row']}, 'backgroundColor': color4_faded,'border': '1px black'},)
             return style, None, None, True
     elif trigger_id =='results_table_datatable':
         if active:
-            style.append({'if': {'row_index': active['row']}, 'backgroundColor': '#cef786','border': '1px solid green'},)
-            seleted_row_data = table_data[active['row']]
-            selected_unique_key = seleted_row_data['Unique_key']
+            style.append({'if': {'row_index': active['row']}, 'backgroundColor': color4_faded,'border': '1px black'},)
+            current_data_table = pd.DataFrame(table_data)
+            selected_row_data = table_data[active['row']]
+            selected_unique_key = selected_row_data['Unique_key']
             curve_figure = generate_selected_curve(selected_unique_key)
             curve_figure.update_layout(title={'yref': 'paper','y' : 1,'yanchor' : 'bottom','font':{'size':12}}, title_pad_b = 25, margin=dict(l=20, r=20, t=50, b=20), height = 200)
             curve_figure.update_layout(font = {'size':8}, showlegend=False)
@@ -532,13 +735,15 @@ def update_selected_row_color(active,n_clicks, table_data):
             return style, None, None, True
     raise PreventUpdate
 
-#Generating or clearing for all hits
+#Generating or clearing graphs for all hits
 @app.callback(
     Output('all_graphs_div', 'children'),
     [Input('generate', 'n_clicks'),
-     Input('clear', 'n_clicks')],
+     Input('clear', 'n_clicks'),
+     Input('summary_graphs', 'n_clicks'),
+     Input('submit', 'n_clicks'),],
     [State('results_table_datatable', 'data')])
-def update_or_clear_graphs(generate_clicks, clear_clicks, current_table_data):
+def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update_clicks, current_table_data):
     ctx = callback_context
     if not ctx.triggered:
         raise PreventUpdate
@@ -551,93 +756,55 @@ def update_or_clear_graphs(generate_clicks, clear_clicks, current_table_data):
                 new_figure = generate_all_curves(cropped_list)
                 new_figure.update_yaxes(matches=None)
                 new_figure.for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True))
-                new_figure.update_layout(height=200 * len(cropped_list)/2, title = "WARNING: Too many figures to plot. <br><sup> The first 50 have been generated. <br>  ", title_font_color="red") #Each plot is 400px high (i.e. 200 is half of 400)
+                new_figure.update_layout(height=200 * len(cropped_list)/5, title = "WARNING: Too many figures to plot. <br><sup> The first 50 have been generated. <br>", title_font_color="red", margin=dict(t=100)) #Each plot is 400px high (i.e. 200 is half of 400)
                 graph_object = dcc.Graph(id='all_graphs_object', figure=new_figure, style={'font-family': 'Arial'})
                 return graph_object
             else:
                 new_figure = generate_all_curves(key_list)
                 new_figure.update_yaxes(matches=None)
                 new_figure.for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True))
-                new_figure.update_layout(height=200 * len(key_list)/2) #Each plot is 400px high (i.e. 200 is half of 400)
+                new_figure.update_layout(height=200 * len(key_list)/5) #Each plot is 400px high (i.e. 200 is half of 400)
                 graph_object = dcc.Graph(id='all_graphs_object', figure=new_figure, style={'font-family': 'Arial'})
                 return graph_object
+    elif trigger_id == 'summary_graphs':
+            if (summary_clicks is not None) & (current_table_data is not None):
+                hits_key_list = [d['Unique_key_subplot'] for d in current_table_data]
+                df_results.loc[:, 'Hit'] = np.where(df_results['Unique_key_subplot'].isin(hits_key_list), 'Hit', 'Not a hit') #Assign hits as defined in the current hit list
+                df_results.loc[:, 'Hit'] = np.where(df_results['Well_type'] == 'Control', "Control", df_results['Hit'])
+                df_hits_raw = df_results[df_results['Hit'] == 'Hit']
+                df_hits_sub = df_hits_raw.loc[:, ['Platename','Fraction','Well','Hit']]
+                df_hits = df_hits_sub.drop_duplicates()
+                Hit_distribution_figure = generate_scatterplot()
+                Hits_per_plate_figure = generate_barplot(df_hits,'Platename', 'Fraction')
+                Hits_per_fraction_figure = generate_barplot(df_hits, 'Fraction', 'Platename')
+            else:
+                Hit_distribution_figure = None
+                Hits_per_plate_figure = None
+                Hits_per_fraction_figure = None
+            graph_Div = html.Div([
+                    html.Hr(style = {'margin-bottom':'0px','width': '100%', 'margin-top':'10px'}), #Break
+                    html.Div([
+                                html.H3('Distribution of hits:',style = {'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'20px'}),
+                                dcc.Loading(dcc.Graph(id = 'Hit_distribution_graph',figure=Hit_distribution_figure),type = 'dot', color = color5)
+                            ], id = 'hit_plots_div1', style = {'display':'inline-block','vertical-align':'top', 'width': '100%'}),
+                    html.Hr(style = {'margin-bottom':'0px','width': '100%', 'margin-top':'10px'}), #Break
+                    html.Div([
+                                html.H3('Hits per plate colored by fraction:',style = {'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'20px'}),
+                                dcc.Loading(dcc.Graph(id = 'Hits_per_plate',figure=Hits_per_plate_figure),type = 'dot', color = color5)
+                            ], id = 'hit_plots_div2', style = {'display':'inline-block','vertical-align':'top', 'width': '50%'}),
+                    html.Div([
+                                html.H3('Hits per fraction colored by plate:',style = {'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'20px'}),
+                                dcc.Loading(dcc.Graph(id = 'Hits_per_fraction',figure=Hits_per_fraction_figure),type = 'dot', color = color5)
+                            ], id = 'hit_plots_div3', style = {'display':'inline-block','vertical-align':'top', 'width': '50%'})])
+            return graph_Div
     elif trigger_id == 'clear':
-        if clear_clicks > 0:
+        if (clear_clicks is not None):
+            return None
+    elif trigger_id == 'submit':
+        if update_clicks is not None:
             return None
     raise PreventUpdate
 
-#Update hit table based on input box values
-@app.callback(
-    Output('results_table', 'children'),
-    Input('submit', 'n_clicks'),
-    State('relative_zscore_cutoff', 'value'),
-    State('lower_limit_amp', 'value'),
-    State('upper_limit_amp', 'value'),
-    prevent_initial_call=True
-)
-def update_hit_table(n_clicks, zscore_cutoff, lower_value_amp, upper_value_amp):
-    if n_clicks is None:
-        raise PreventUpdate
-    else:
-        original_df  = df_results[(df_results['Well_type'] != 'Control')&(df_results['Plate_status'] == 'OK')&(df_results['Error'] == '')]
-        small_df = original_df.loc[:, ['Source_Plate','Well','Subplot','Compound','Fraction','Final_Tm','Well_zscore','Unique_key', 'Relative_amplitude','Max_ctrl_zscore_for_plate']]
-        small_df = small_df.rename(columns = {'Well_zscore':'zscore'})
-        cutoff = zscore_cutoff/100
-        small_df["Hit"] = np.where(small_df['zscore'].abs() > 
-                        (small_df['Max_ctrl_zscore_for_plate'].abs()+
-                         (small_df['Max_ctrl_zscore_for_plate'].abs()*cutoff))
-                        ,"Hit","Not a hit")
-        filtered_df = small_df[((small_df.Hit == 'Hit'))&((small_df.Relative_amplitude <= upper_value_amp)&(small_df.Relative_amplitude >= lower_value_amp))]
-        filtered_df.sort_values('zscore',ascending=False, inplace= True)
-        filtered_df = filtered_df.rename(columns = {'zscore':'Well_zscore'})
-        filtered_df_count = filtered_df['Unique_key'].nunique()
-        header = html.Label("Total hits: "+str(filtered_df_count), style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'font-size': '20px', 'color':'dark green'}, id = 'hits_header')
-        data_table = dash_table.DataTable(filtered_df.to_dict('records'), [{'name': i, 'id': i} for i in filtered_df.columns], 
-                id = 'results_table_datatable',
-                hidden_columns=['Unique_key','Max_ctrl_zscore_for_plate','Hit'], 
-                style_as_list_view=True, 
-                row_deletable=True, 
-                sort_action='native',
-                export_format='xlsx',
-                style_table = {'height':'250px','overflow-y':'scroll'},
-                style_cell={'fontSize':12, 'font-family':'Arial'}, 
-                style_header = {'backgroundColor': '#a6ed6f','fontWeight': 'bold'})
-    return header, data_table
-
-
-#Callback to fix figures auto adjusting to tiny
-#Taken from: https://github.com/plotly/dash-core-components/issues/922
-@app.callback(
-    [Output('control_curves','figure'),
-    Output('Tm_plates','figure'),
-    Output('Z_plates','figure')],
-    Input('tabs','value'),
-    State('control_curves','figure'),
-    State('Tm_plates','figure'),
-    State('Z_plates','figure')
-)
-
-def controlGraphSizes(tabValue,figure1,figure2, figure3):
-    tab2_height = 250*(len(df_curves['Assay_Plate'].unique()))
-    tab3_height = 500*(len(df_curves['Assay_Plate'].unique()))
-    tab4_height = 500*(len(df_curves['Assay_Plate'].unique()))
-    if tabValue == 'tab-1':
-        return dash.no_update
-    elif tabValue == 'tab-2':
-        figure1['layout']['height'] = tab2_height
-        return [figure1,dash.no_update,dash.no_update]
-    elif tabValue == 'tab-3':
-        figure2['layout'].update(plot_bgcolor = '#FFFFFF',paper_bgcolor = '#FFFFFF', height = tab3_height, width = '50vw', margin=dict(l=30, r=30, t=50, b=0))
-        return [dash.no_update,figure2,dash.no_update]
-    elif tabValue == 'tab-4':
-        figure3['layout'].update(plot_bgcolor = '#FFFFFF',paper_bgcolor = '#FFFFFF', height = tab4_height, width = '50vw', margin=dict(l=30, r=30, t=50, b=0))
-        return [dash.no_update,dash.no_update,figure3]
-    elif tabValue == 'tab-5':
-        return dash.no_update
-    else:
-        raise PreventUpdate
-
 # Run the app
 if __name__ == '__main__':
-    app.run(host ='0.0.0.0',debug=True)
-
+    app.run(host ='0.0.0.0',port = args.port, debug=False)
