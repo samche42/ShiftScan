@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 import os
 import pandas as pd
+import gc 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input_dir", help="Full file path to directory with input files")
@@ -13,7 +14,7 @@ parser.add_argument("-p", "--processors", help="No. of processors you want to us
 parser.add_argument("-c", "--control_cols", help="The column numbers of your controls", default = "1,2")
 parser.add_argument("-o", "--output_dir", help="Full path to desired output directory", default = "./")
 parser.add_argument("-x", "--failed_control_wells", help="The number of controls allowed to fail before a plate is failed", default = 8)
-parser.add_argument("-t", "--ctrl_tm_cutoff", help="Maximum z-score of ctrl curve melting temps", default = 2)
+parser.add_argument("-t", "--ctrl_tm_cutoff", help="Maximum z-score of ctrl curve melting temps", default = 1.5)
 parser.add_argument("-a", "--ctrl_amp_cutoff", help="Maximum z-score of ctrl curve amplitude", default = 3)
 parser.add_argument("-u", "--max_amp_cutoff", help="Maximum relative amplitude of curves allowed", default = 6)
 parser.add_argument("-l", "--min_amp_cutoff", help="Minimum relative amplitude of curves allowed", default = 0.25)
@@ -99,10 +100,12 @@ if __name__ == '__main__':
         map_raw_df = pd.read_csv(args.metadata,sep='\t',header=0)
     except:
         print("Metadata could not be read in. Please check that data is tab delimited and has a header in the first row")
+        sys.exit()
     try:
         map_raw_df = map_raw_df.rename(columns={'ASSAY_PLATE': 'Assay_Plate','SOURCE_PLATE':'Source_Plate','WELL':'Well','COMPOUND':'Compound','FRACTION':'Fraction'}) 
     except:
-        print("Metadata could not be read in. Please confir that headers are as expected")
+        print("Metadata could not be read in. Please confirm that headers are as expected")
+        sys.exit()
     try:
         map_raw_df['Row'] = map_raw_df['Well'].str[0] #Take first character from Well string and make it Row value 
         map_raw_df['Column'] = map_raw_df['Well'].str[1:] #Take everything beyond first character as Column (includes padded zeros, as temporarily kept as string)
@@ -112,7 +115,8 @@ if __name__ == '__main__':
         map_raw_df.Fraction = map_raw_df.Fraction.fillna('NA')
         print("Metadata successfully loaded. Onwards...")
     except: 
-        print("A problem was encountered while parsing matadata. Please confirm that format is correct")
+        print("A problem was encountered while parsing metadata. Please confirm that format is correct")
+        sys.exit()
 
     #Now let's subset and do an inner merge
     tmp = map_raw_df[['Assay_Plate','Source_Plate']].drop_duplicates()
@@ -125,12 +129,8 @@ if __name__ == '__main__':
     final_df['Well_type'] = np.select([is_control, is_blank],['Control', 'Blank'],default='Experimental')
     print("Control columns assigned")
 
-    #Finally, we're going to try and bypass the noise of early high fluorescence by removing all data points with Temps lower than 35 degrees. 
-    final_df = final_df[final_df['Temp'] > 35]
-    final_df = final_df[final_df['Temp'] < 70]
-
     #Let's delete a few dataframes taking up memory
-    del parsed_df, melted_df, semifinal_df,semifinal_df2,tmp
+    del parsed_df, melted_df, semifinal_df,semifinal_df2,tmp, map_raw_df,raw_input_df
 
     # Function to normalize values between 0 and 1
     def normalize(series):
@@ -158,7 +158,7 @@ if __name__ == '__main__':
     import multiprocessing
     from multiprocessing import cpu_count
     from functools import partial
-    from DSF_functions import slice_list, clean_curve, split_curves,add_curve_data, boltzmann_sigmoid, initial_params, Model_data, process_well, process_wrapper
+    from DSF_functions_fiddling import slice_list, clean_curve, split_curves,add_curve_data, boltzmann_sigmoid, initial_params, Model_data, process_well
 
     #Create empty dataframe for melting temp summary output
     Tm_df = pd.DataFrame(columns = ['Assay_Plate','Source_Plate','Well','Unique_key','Subplot','Well_type','Compound','Fraction','Smooth_Tm','Boltzmann_Tm','Boltzmann_RSS','Amplitude','Curve_height','Error','Warning'])
@@ -167,17 +167,20 @@ if __name__ == '__main__':
     all_tm_rows = []
     all_subcurves = []
 
-    #Process each well
-    unique_keys = list(final_df.Unique_key.unique()) #Create list of all unique keys for subsetting
+    # Group by 'Unique_key' and convert each group to a DataFrame
+    list_of_sub_dfs = [group.reset_index(drop=True) for _, group in final_df.groupby('Unique_key')]
+
     print("Multiprocessing of wells started")
 
     with multiprocessing.Pool(processes=int(args.processors)) as pool:
-        partial_process_wrapper = partial(process_wrapper, final_df=final_df,smoothing_factor=smoothing_fact,normalize=normalize_data)
-        results = pool.map(partial_process_wrapper, unique_keys)
+        partial_process_wrapper = partial(process_well, smoothing_factor=smoothing_fact,normalize=normalize_data)
+        results = pool.map(partial_process_wrapper, list_of_sub_dfs)
         for original_curve_rows, sub_curve_rows, Tm_rows in results:
             all_original_curve_rows.extend(original_curve_rows)
             all_subcurves.extend(sub_curve_rows)
             all_tm_rows.extend(Tm_rows)
+        del results
+        gc.collect()
 
     print("Multiprocessing of wells ended")
 
@@ -207,14 +210,10 @@ if __name__ == '__main__':
     from scipy import stats
     print("Looking for bad control wells")
 
-    #Count how many wells failed in modelling stage 
-    ctrl_error_df = Tm_df[Tm_df['Well_type'] == 'Control'].groupby(['Assay_Plate'],as_index=False)['Error'].apply(lambda x: x[x.str.contains('ailed',na=False)].count())
-    ctrl_error_df = ctrl_error_df.rename(columns={'Error': 'Modelling failures'}) 
-
     control_z_scores = Tm_df[Tm_df['Well_type'] == 'Control'].groupby(['Assay_Plate'],as_index=False)[['Smooth_Tm','Amplitude']].transform(stats.zscore).abs() #Generate z-scores for control wells
     control_z_scores = control_z_scores.rename(columns={'Smooth_Tm': 'Ctrl_Tm_z-score', 'Amplitude':'Ctrl_Amplitude_z-score'}) #Rename columns
     if control_z_scores.isnull().values.any() == True:
-        print("Wow! At least one platewith perfect controls! Nice!")
+        print("Wow! At least one plate with perfect controls! Nice!")
         control_z_scores = control_z_scores.fillna(0)
     Tm_df = Tm_df.join(control_z_scores) #merge on index
 
@@ -229,15 +228,6 @@ if __name__ == '__main__':
     Tm_df['Error'] = np.where((Tm_df['Ctrl_Tm_z-score'] > Tm_cutoff), Tm_df['Error']+ "Failed: Tm > "+str(Tm_cutoff)+" std away from mean. ", Tm_df['Error'])
     Tm_df['Error'] = np.where((Tm_df['Ctrl_Amplitude_z-score'] > Amp_cutoff), Tm_df['Error']+ "Failed: Amplitude > "+str(Amp_cutoff)+" std away from mean. ", Tm_df['Error'])
 
-    #Count up ctrls that fail due to deviation from Tm mean
-    ctrl_tm_failures = Tm_df[Tm_df['Well_type'] == 'Control'].groupby(['Assay_Plate'], as_index=False)['Ctrl_Tm_z-score'].apply(lambda x: (x > Tm_cutoff).sum())
-    ctrl_tm_failures = ctrl_tm_failures.rename(columns={'Ctrl_Tm_z-score': 'Tm_Z-score_failures'}) #Rename column
-    ctrl_error_df = pd.merge(ctrl_error_df, ctrl_tm_failures, on=['Assay_Plate'])
-
-    #Count up ctrls that fail due to deviation from amplitude or height means
-    ctrl_amplitude_failures = Tm_df[Tm_df['Well_type'] == 'Control'].groupby(['Assay_Plate'],as_index=False)['Ctrl_Amplitude_z-score'].apply(lambda x: (x > Amp_cutoff).sum())
-    ctrl_amplitude_failures = ctrl_amplitude_failures.rename(columns={'Ctrl_Amplitude_z-score': 'Amp_Z-score_failures'}) #Rename column
-    ctrl_error_df = pd.merge(ctrl_error_df, ctrl_amplitude_failures, on=['Assay_Plate'])
     print("Bad controls identified and removed from downstream analyses")
 
     ################################
@@ -290,17 +280,6 @@ if __name__ == '__main__':
     Tm_df = Tm_df.sort_values(by=["Unique_key", "Subplot"])
     Tm_df = Tm_df.reset_index(drop = True)
 
-    #Summarize and count errors
-    failed_wells = Tm_df[Tm_df['Well_type'] == 'Control'][Tm_df[Tm_df['Well_type'] == 'Control']['Final_decision'].str.contains('Failed', case=False)].groupby(['Assay_Plate'])['Well'].agg(lambda x: ','.join(x)).reset_index() #Get list of failed wells
-    failed_wells['Total'] = failed_wells['Well'].apply(lambda x: len(x.split(','))) #Count failed wells listed
-    ctrl_error_df = pd.merge(ctrl_error_df, failed_wells, on=['Assay_Plate'], how = 'outer') #Merge that back in to the ctrl df
-    ctrl_error_df['Total'].fillna(0, inplace=True) #Fill in nans with 0s
-    ctrl_error_df['Total'] = ctrl_error_df['Total'].astype(int) #Convert column values to integers instead of float (just looks neater to me)
-    plate_status_df = ctrl_error_df.groupby('Assay_Plate')['Total'].sum().reset_index() #Count failures per plate
-    plate_status_df['Plate_status'] = np.where(plate_status_df['Total'] > 8, 'Failed','OK') #Assign plate status according to ctrl failure cutoff
-    Tm_df = pd.merge(Tm_df, plate_status_df, on = 'Assay_Plate') #merge that all back in
-    Tm_df['Spotfire_Platename'] = np.where(Tm_df['Total'] > 8, Tm_df['Source_Plate']+" ("+Tm_df['Plate_status']+")", Tm_df['Source_Plate']) #Add "Failed" to plate name to make it obvious in visulizations
-
     Tm_df['Row'] = Tm_df['Well'].str[0] #Generate Row column (needed to build visualizations)
     Tm_df['Column'] = (Tm_df['Well'].str[1:]).astype(int) #Generate Column column (needed to build visualizations)
     Tm_df['Relative_amplitude'] = Tm_df['Amplitude']/Tm_df['Ctrl_avg_amplitude']
@@ -314,6 +293,14 @@ if __name__ == '__main__':
     ctrl_max_zscore = Tm_df[Tm_df["Well_type"] == 'Control'].groupby(['Assay_Plate'],as_index=False)['Well_zscore'].max()
     ctrl_max_zscore.rename(columns={'Well_zscore': 'Max_ctrl_zscore_for_plate'}, inplace=True)
     Tm_df = pd.merge(Tm_df, ctrl_max_zscore, on = 'Assay_Plate')
+
+    #Finding min ctrl z-score per plate
+    ctrl_min_zscore = Tm_df[Tm_df["Well_type"] == 'Control'].groupby(['Assay_Plate'],as_index=False)['Well_zscore'].min()
+    ctrl_min_zscore.rename(columns={'Well_zscore': 'Min_ctrl_zscore_for_plate'}, inplace=True)
+    Tm_df = pd.merge(Tm_df, ctrl_min_zscore, on = 'Assay_Plate')
+
+    #Finding difference between well and ctrl average
+    Tm_df['Diff from ctrl avg'] = Tm_df['Final_Tm'] - Tm_df['Avg_ctrl_melting_temp']
 
     well_type_df = Tm_df.loc[:, ['Unique_key', 'Well_type']]
     decision_df = Tm_df.loc[:, ['Unique_key','Subplot','Final_decision','Error']]
@@ -329,18 +316,54 @@ if __name__ == '__main__':
     # PART 7: Generating reports
     #
     ################################
+    from functools import reduce
+
     print("Generating reports...")
 
-    plate_report_tmp = pd.merge(ctrl_error_df, plate_status_df, on = 'Assay_Plate')
-    plate_report_tmp = plate_report_tmp.drop('Total_x',axis = 1)
-    plate_report = plate_report_tmp.rename(columns={'Total_y':'Total_failures', 'Well':'Wells'})
-    plate_report = pd.merge(plate_report, Tm_df[['Assay_Plate','Source_Plate']], on = 'Assay_Plate', how = 'inner')
-    plate_report = plate_report[['Source_Plate','Assay_Plate','Plate_status','Total_failures','Wells','Modelling failures','Tm_Z-score_failures','Amp_Z-score_failures']]
-    plate_report.drop_duplicates(keep='first', inplace=True)
+    failed_df = Tm_df[Tm_df['Final_decision'] == 'Failed']
+    all_plates = Tm_df['Assay_Plate'].unique()
+
+    #Count total failed controls per assay plate
+    total_failures_series = failed_df[(failed_df['Well_type'] == 'Control')].groupby('Assay_Plate').size()
+    total_failures_series = total_failures_series.reindex(all_plates, fill_value = 0)
+    total_failures_df = total_failures_series.reset_index(name='Total_failures')
+    total_failures_df['Plate_status'] = np.where(total_failures_df['Total_failures'] > args.failed_control_wells, "Failed","OK")
+
+    #Count how many of the errors were down to the Tm being outside the desired z-score range
+    melting_temp_failures_series = failed_df[(failed_df['Well_type'] == 'Control')&(failed_df['Error'].str.contains('Tm >'))].groupby('Assay_Plate').size()
+    melting_temp_failures_series = melting_temp_failures_series.reindex(all_plates, fill_value = 0)
+    melting_temp_failures_df = melting_temp_failures_series.reset_index(name='Ctrl_Tm_Z-score_failures')
+
+    #Count ctrl wells that failed modelling
+    model_failure_series = failed_df[(failed_df['Well_type'] == 'Control')&((failed_df['Error'].str.contains('No region of positive slope')) | \
+                                                                            (failed_df['Error'].str.contains('Parameter optimization')) | \
+                                                                            (failed_df['Error'].str.contains('Modelling failed for both methods')))].groupby('Assay_Plate').size()
+    model_failure_series = model_failure_series.reindex(all_plates, fill_value = 0)
+    model_failure_df = model_failure_series.reset_index(name='Modelling_failures')
+
+    #Count ctrl wells that failed amplitude restrictions
+    amp_failures_series = failed_df[(failed_df['Well_type'] == 'Control')&(failed_df['Error'].str.contains('Failed: Amplitude too'))].groupby('Assay_Plate').size()
+    amp_failures_series = amp_failures_series.reindex(all_plates, fill_value = 0)
+    amp_failures_df = amp_failures_series.reset_index(name='Amp_Z-score_failures')
+
+    #List out failed wells
+    failed_wells = Tm_df[Tm_df['Well_type'] == 'Control'][Tm_df[Tm_df['Well_type'] == 'Control']['Final_decision'].str.contains('Failed', case=False)].groupby(['Assay_Plate'])['Well'].agg(lambda x: ','.join(x)).reset_index()
+    failed_wells= failed_wells.rename(columns={'Well':'Failed ctrl wells'})
+    
+    #Put it all together
+    plate_status_df = Tm_df[['Assay_Plate','Source_Plate']].drop_duplicates()
+    list_of_dfs = [plate_status_df,total_failures_df,failed_wells,melting_temp_failures_df,model_failure_df,amp_failures_df]
+    plate_report = reduce(lambda  left,right: pd.merge(left,right,on=['Assay_Plate'],how='outer'), list_of_dfs)
+
+    plate_status_only = plate_report.loc[:, ['Assay_Plate', 'Plate_status']]
+    Tm_df = pd.merge(Tm_df, plate_status_only, on = 'Assay_Plate') #merge plate status back in for visualization purposes
+    Tm_df['Platename'] = np.where(Tm_df['Plate_status'] =='Failed', Tm_df['Source_Plate']+" ("+Tm_df['Plate_status']+")", Tm_df['Source_Plate']) #Add "Failed" to plate name to make it obvious in visulizations
 
     tmp = Tm_df[Tm_df['Well_type'] == 'Control'].groupby(['Well'],as_index=False)['Error'].apply(lambda x: x[x.str.contains('Failed')].count())
     well_error_count_df = tmp[tmp['Error'] >= 3]
-    well_error_count_df = well_error_count_df.rename(columns={'Error':'No. failed'})
+    well_error_count_df = well_error_count_df.rename(columns={'Error':'Wells that repeatedly failed'})
+
+    Tm_df['Unique_key_subplot'] = Tm_df['Unique_key']+"_"+Tm_df['Subplot'].astype(str)
 
     print("Writing output files")
     Tm_df.to_csv(output_dir_string+"/Final_results.txt",sep="\t",index=False)
