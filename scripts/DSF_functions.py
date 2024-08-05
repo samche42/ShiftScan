@@ -30,7 +30,7 @@ def clean_curve(x,spl):
 	clean_x_list = []
 	clean_y_list = []
 	for i in range(len(x_slices)):
-		average_slope = (np.gradient(y_slices[i], x_slices[i])).mean()
+		average_slope = np.nanmean(np.gradient(y_slices[i], x_slices[i])) #Ignore Nan values when calculating mean gradient
 		#Next, let's calculate the gradient of the second derivative slop for each coord set. 
 		#We would expect a mix of positive and negative values if the curve is actually sigmoidal (i.e first deriv curve actually has a peak of sorts)
 		#See Jupyter Notebook "Generating_first_deriv_curves.ipynb" for details
@@ -88,10 +88,11 @@ def boltzmann_sigmoid(x, A, B, C, D):
 #Function calculating initial parameters for 4PL model
 def initial_params(smoothed_y_coords, smoothed_x_coords):
 	y_grad = np.gradient(smoothed_y_coords, smoothed_x_coords)
-	inflection_point = smoothed_x_coords[int(np.where((y_grad==max(y_grad)))[0])]
-	infl_slope = max(y_grad) #Find slope at inflection point
-	low_asm = min(smoothed_y_coords) #Get y coord of lower asymptotes
-	high_asm = max(smoothed_y_coords) #Get y coord of upper asymptote
+	max_grad_index = int(np.where((y_grad == np.nanmax(y_grad)))[0][0])
+	inflection_point = smoothed_x_coords[max_grad_index]
+	infl_slope = np.nanmax(y_grad) #Find slope at inflection point
+	low_asm = np.nanmin(smoothed_y_coords) #Get y coord of lower asymptotes
+	high_asm = np.nanmax(smoothed_y_coords) #Get y coord of upper asymptote
 	return low_asm,infl_slope,inflection_point,high_asm #return all four values for 4 parameter logistic regression model
 
 #Function to return melting temp, residual sum of squares and y-coodinate list for each model
@@ -103,7 +104,7 @@ def Model_data(model, predx, predy, init_params, maxfevopt):
 		RSS = np.sum(residuals**2) #Get residual sum of squares
 		MSE = np.mean(residuals**2) #Get residual mean of squares
 		y_grad = np.gradient(model_y_list_loop, predx)
-		Tm = predx[int(np.where((y_grad==max(y_grad)))[0])]
+		Tm = predx[int(np.where((y_grad==np.nanmax(y_grad)))[0][0])]
 		message = ''
 	except TypeError:		
 		try:
@@ -113,7 +114,7 @@ def Model_data(model, predx, predy, init_params, maxfevopt):
 			RSS = np.sum(residuals**2) #Get residual sum of squares
 			MSE = np.mean(residuals**2) #Get residual mean of squares
 			y_grad = np.gradient(model_y_list_loop, predx)
-			Tm = predx[int(np.where((y_grad==max(y_grad)))[0])]
+			Tm = predx[int(np.where((y_grad==np.nanmax(y_grad)))[0][0])]
 			message = ''
 		except Exception:
 			raise
@@ -126,7 +127,7 @@ def Model_data(model, predx, predy, init_params, maxfevopt):
 				RSS = np.sum(residuals**2) #Get residual sum of squares
 				MSE = np.mean(residuals**2) #Get residual mean of squares
 				y_grad = np.gradient(model_y_list_loop, predx)
-				Tm = predx[int(np.where((y_grad==max(y_grad)))[0])]
+				Tm = predx[int(np.where((y_grad==np.nanmax(y_grad)))[0][0])]
 				message = ''
 			except RuntimeError as errorstring2:
 				if "Optimal parameters not found" in str(errorstring2):
@@ -147,13 +148,14 @@ def Model_data(model, predx, predy, init_params, maxfevopt):
 			raise
 	return Tm, model_y_list_loop, MSE,RSS, message
 
-def process_well(key, sub_df,smoothing_factor,normalize):
+def process_well(sub_df,smoothing_factor,normalize):
 	original_curve_rows = []
 	sub_curve_rows = []
 	temps = []
 	smooth_fluorescence = []
 	boltzmann_y_list = []
 	new_Tm_rows = []
+	key = sub_df['Unique_key'].unique()[0]
 	if sub_df.Well_type.unique()[0] == 'Blank': #Skip the loop if the well is classified as blank. Total waste of time to analyze rubbish data
 		new_Tm_rows = [{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':None,'Well_type': sub_df.Well_type.unique()[0], 'Compound': None,'Fraction': None,'Smooth_Tm': None,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':None,'Curve_height': None, 'Error':'','Warning':''}]
 	else:
@@ -184,7 +186,7 @@ def process_well(key, sub_df,smoothing_factor,normalize):
 		boltzmann_y_list = [None for _ in range(len(x[0::4]))]
 		original_curve_rows.append(add_curve_data(key, None,temps[0], smooth_fluorescence[0],boltzmann_y_list))
 		if curve_count == 0:
-			final_message = "Well failed: No region of positive slope"
+			final_message = "Well failed: No region of positive slope or shape not sigmoidal"
 			new_Tm_rows = [{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':None,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': None,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':None,'Curve_height': None, 'Error':final_message,'Warning':''}]
 		else:
 			sub_plot_count = 0
@@ -199,8 +201,3 @@ def process_well(key, sub_df,smoothing_factor,normalize):
 				sub_curve_rows.append(add_curve_data(key, sub_plot_count, final_list_of_x_coords[k], final_list_of_y_coords[k],boltzmann_y_coordinates))
 				new_Tm_rows.extend([{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':sub_plot_count,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': p0[2],'Boltzmann_Tm':boltzmann_Tm,'Boltzmann_RSS': RSS,'Amplitude':p0[3] - p0[0],'Curve_height': p0[3], 'Error':final_message,'Warning':''}])
 		return original_curve_rows, sub_curve_rows, new_Tm_rows
-
-def process_wrapper(key,final_df,smoothing_factor,normalize):
-    sub_df = final_df.loc[final_df['Unique_key'] == key]
-    return process_well(key, sub_df,smoothing_factor,normalize)
-
