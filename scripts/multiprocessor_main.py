@@ -158,7 +158,7 @@ if __name__ == '__main__':
     import multiprocessing
     from multiprocessing import cpu_count
     from functools import partial
-    from DSF_functions_fiddling import slice_list, clean_curve, split_curves,add_curve_data, boltzmann_sigmoid, initial_params, Model_data, process_well
+    from DSF_functions import slice_list, clean_curve, split_curves,add_curve_data, boltzmann_sigmoid, initial_params, Model_data, process_well
 
     #Create empty dataframe for melting temp summary output
     Tm_df = pd.DataFrame(columns = ['Assay_Plate','Source_Plate','Well','Unique_key','Subplot','Well_type','Compound','Fraction','Smooth_Tm','Boltzmann_Tm','Boltzmann_RSS','Amplitude','Curve_height','Error','Warning'])
