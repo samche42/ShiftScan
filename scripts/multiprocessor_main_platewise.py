@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
 
-import argparse, sys,os, glob, time, gc, psutil, tracemalloc, multiprocessing
+import argparse, sys, os, glob, gc, multiprocessing
 from pathlib import Path
 import pandas as pd
 import numpy as np
 from multiprocessing import cpu_count
 from functools import partial
 from DSF_functions import slice_list, clean_curve, split_curves,add_curve_data, boltzmann_sigmoid, initial_params, Model_data, process_well
-
-start_time = time.time()
-tracemalloc.start()
-process = psutil.Process(os.getpid())
-initial_memory = process.memory_info().rss
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input_dir", help="Full file path to directory with input files")
@@ -358,11 +353,3 @@ else:
         os.remove(filename)
     for filename in glob.glob(output_dir_string+"/Potential_problems_plate_*"):
         os.remove(filename)
-
-end_time = time.time()
-tot_time = end_time -start_time
-print("Total time for "+str(plate_count)+" plates: "+str(tot_time)+" seconds")
-current, peak = tracemalloc.get_traced_memory()
-final_memory = process.memory_info().rss
-print(f"Total memory usage: {final_memory / 10**3}KB")
-tracemalloc.stop()
