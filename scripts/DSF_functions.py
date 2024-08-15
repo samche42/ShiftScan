@@ -6,7 +6,24 @@ from scipy.optimize import OptimizeWarning
 import warnings
 from scipy.signal import find_peaks
 import numpy as np
+import pandas as pd
 import sys
+
+def find_inflection(x,y):
+    deriv1 = np.gradient(y,x)
+    deriv2 = list(np.gradient(deriv1,x))
+    for i in range(len(deriv2) - 1):
+        if deriv2[i] * deriv2[i+1] < 0:
+            x_zero = x[i] - deriv2[i] * (x[i+1] - x[i]) / (deriv2[i+1] - deriv2[i])
+            return x_zero
+
+def concatenate_files(files, output_dir_string, output_filename):
+    dfs = list() #Empty list of all files (converted to dfs)
+    for file in files:
+        data = pd.read_csv(output_dir_string+"/"+file, sep='\t',header=0)
+        dfs.append(data)
+    dataframe = pd.concat(dfs, ignore_index=True)
+    dataframe.to_csv(output_dir_string+"/"+output_filename,sep="\t",index=False)
 
 def slice_list(positions,input_list):
 	returned_list = []
@@ -25,8 +42,8 @@ def clean_curve(x,spl):
 	index_positions = np.sort(np.append(index_positions, [0,len(pred_y)])) #Add in 0 and last position of coordinates
 	x_slices = slice_list(index_positions, pred_x) #Slice x-coordinates at minima and maxima
 	y_slices = slice_list(index_positions, pred_y) #Slice y-coordinates at minima and maxima
-	x_slices = [sublist for sublist in x_slices if len(sublist) >= 20] #Remove any coord list with less than 20 data points
-	y_slices = [sublist for sublist in y_slices if len(sublist) >= 20] #Remove any coord list with less than 20 data points
+	x_slices = [sublist for sublist in x_slices if len(sublist) >= 5] #Remove any coord list with less than 20 data points
+	y_slices = [sublist for sublist in y_slices if len(sublist) >= 5] #Remove any coord list with less than 20 data points
 	clean_x_list = []
 	clean_y_list = []
 	for i in range(len(x_slices)):
@@ -63,8 +80,8 @@ def split_curves(list_of_x_coords, list_of_y_coords):
 		else: #If there is a maxima, we must split the graph
 			sliced_x = slice_list(maxima, list_of_x_coords[i])
 			sliced_y = slice_list(maxima, list_of_y_coords[i])
-			sliced_x = [sublist for sublist in sliced_x if len(sublist) >= 20]
-			sliced_y = [sublist for sublist in sliced_y if len(sublist) >= 20]
+			sliced_x = [sublist for sublist in sliced_x if len(sublist) >= 5]
+			sliced_y = [sublist for sublist in sliced_y if len(sublist) >= 5]
 			new_list_of_x_coords.extend(sliced_x)
 			new_list_of_y_coords.extend(sliced_y)
 	return new_list_of_x_coords,new_list_of_y_coords
@@ -90,6 +107,7 @@ def initial_params(smoothed_y_coords, smoothed_x_coords):
 	y_grad = np.gradient(smoothed_y_coords, smoothed_x_coords)
 	max_grad_index = int(np.where((y_grad == np.nanmax(y_grad)))[0][0])
 	inflection_point = smoothed_x_coords[max_grad_index]
+	exact_inflection_point = find_inflection(smoothed_x_coords,smoothed_y_coords)
 	infl_slope = np.nanmax(y_grad) #Find slope at inflection point
 	low_asm = np.nanmin(smoothed_y_coords) #Get y coord of lower asymptotes
 	high_asm = np.nanmax(smoothed_y_coords) #Get y coord of upper asymptote
@@ -157,7 +175,8 @@ def process_well(sub_df,smoothing_factor,normalize):
 	new_Tm_rows = []
 	key = sub_df['Unique_key'].unique()[0]
 	if sub_df.Well_type.unique()[0] == 'Blank': #Skip the loop if the well is classified as blank. Total waste of time to analyze rubbish data
-		new_Tm_rows = [{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':None,'Well_type': sub_df.Well_type.unique()[0], 'Compound': None,'Fraction': None,'Smooth_Tm': None,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':None,'Curve_height': None, 'Error':'','Warning':''}]
+		new_Tm_rows = [{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':None,'Well_type': sub_df.Well_type.unique()[0], 'Compound': None,'Fraction': None,'Smooth_Tm': None,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':None,'Curve_height': None, 'Error':'Blank well','Warning':''}]
+		return original_curve_rows, sub_curve_rows, new_Tm_rows
 	else:
 		x = list(sub_df["Temp"].values.tolist()) #Convert Temp and fluorescence columns to lists of values
 		if normalize == "y":
@@ -170,7 +189,7 @@ def process_well(sub_df,smoothing_factor,normalize):
 			spl = splrep(x,y, s = smoothing_factor) #Smooth data. This used to be 0.05 when working with raw data. This changes drastically when dealing with normalized data
 		except RuntimeWarning:
 			list_length = len(x[0::4])
-			final_message = "Failed: Smoothing failed"
+			final_message = "Failed: Smoothing failed"   
 			temps.append([None for _ in range(list_length)])
 			smooth_fluorescence.append([None for _ in range(list_length)])
 			boltzmann_y_list = [None for _ in range(len(x[0::4]))]
@@ -196,8 +215,14 @@ def process_well(sub_df,smoothing_factor,normalize):
 				sub_plot_count +=1 #Get a count for the subplots
 				p0 = initial_params(final_list_of_y_coords[k],final_list_of_x_coords[k]) #Find initial parameters for model
 				maxfev_opt = 100*(len(final_list_of_y_coords[k])+1) #Optimize maxfev parameter for each dataset https://www.physics.utoronto.ca/~phy326/python/curve_fit_to_data.py
-				boltzmann_Tm, boltzmann_y_coordinates, MSE, RSS, final_message = Model_data(boltzmann_sigmoid, final_list_of_x_coords[k],final_list_of_y_coords[k], p0, maxfev_opt) #Fit Boltzmann
-				boltzmann_y_coordinates = (boltzmann_y_coordinates.tolist())
-				sub_curve_rows.append(add_curve_data(key, sub_plot_count, final_list_of_x_coords[k], final_list_of_y_coords[k],boltzmann_y_coordinates))
-				new_Tm_rows.extend([{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':sub_plot_count,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': p0[2],'Boltzmann_Tm':boltzmann_Tm,'Boltzmann_RSS': RSS,'Amplitude':p0[3] - p0[0],'Curve_height': p0[3], 'Error':final_message,'Warning':''}])
+				exact_inflection_point = find_inflection(final_list_of_x_coords[k],final_list_of_y_coords[k])
+				if exact_inflection_point is None:
+					boltzmann_y_coordinates = [None for _ in range(len(final_list_of_x_coords[k]))]
+					sub_curve_rows.append(add_curve_data(key, sub_plot_count, final_list_of_x_coords[k], final_list_of_y_coords[k],boltzmann_y_coordinates))
+					new_Tm_rows.extend([{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':sub_plot_count,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': exact_inflection_point,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':p0[3] - p0[0],'Curve_height': p0[3], 'Error':'Failed: Inflection point could not be determined','Warning':''}])
+				else:
+					boltzmann_Tm, boltzmann_y_coordinates, MSE, RSS, final_message = Model_data(boltzmann_sigmoid, final_list_of_x_coords[k],final_list_of_y_coords[k], p0, maxfev_opt) #Fit Boltzmann
+					boltzmann_y_coordinates = (boltzmann_y_coordinates.tolist())
+					sub_curve_rows.append(add_curve_data(key, sub_plot_count, final_list_of_x_coords[k], final_list_of_y_coords[k],boltzmann_y_coordinates))
+					new_Tm_rows.extend([{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':sub_plot_count,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': exact_inflection_point,'Boltzmann_Tm':boltzmann_Tm,'Boltzmann_RSS': RSS,'Amplitude':p0[3] - p0[0],'Curve_height': p0[3], 'Error':final_message,'Warning':''}])
 		return original_curve_rows, sub_curve_rows, new_Tm_rows
