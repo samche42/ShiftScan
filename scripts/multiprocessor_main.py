@@ -5,13 +5,7 @@ import sys
 from pathlib import Path
 import os
 import pandas as pd
-import time
 import gc 
-import psutil
-
-start_time = time.time()
-process = psutil.Process(os.getpid())
-initial_memory = process.memory_info().rss
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input_dir", help="Full file path to directory with input files")
@@ -383,10 +377,3 @@ if __name__ == '__main__':
     plate_report.to_csv(output_dir_string+"/Plate_report.txt",sep="\t",index=False)
     well_error_count_df.to_csv(output_dir_string+"/Potential_problems.txt",sep="\t",index=False)
     print("Analysis complete!")
-
-end_time = time.time()
-tot_time = end_time -start_time
-no_plates = len(dfs)
-print("Total time for "+str(no_plates)+" plates: "+str(tot_time)+" seconds")
-final_memory = process.memory_info().rss
-print(f"Total memory usage: {final_memory / 10**3}KB")
