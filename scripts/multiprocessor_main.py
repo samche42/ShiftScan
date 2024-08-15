@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 
-import argparse
-import sys
+import argparse, sys, os, gc
 from pathlib import Path
-import os
 import pandas as pd
-import gc 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input_dir", help="Full file path to directory with input files")
