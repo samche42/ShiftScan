@@ -5,7 +5,13 @@ import sys
 from pathlib import Path
 import os
 import pandas as pd
+import time
 import gc 
+import psutil
+
+start_time = time.time()
+process = psutil.Process(os.getpid())
+initial_memory = process.memory_info().rss
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input_dir", help="Full file path to directory with input files")
@@ -37,6 +43,8 @@ if any(Path(args.input_dir).glob('*.txt')):
             dfs.append(data)
         except:
             print("There was a problem concatenating file: "+str(file)+". Please confirm the file is tab delimited and has correct headers")
+            sys.exit()
+         
 else:
     print("No text files found in specified input folder")
     sys.exit() 
@@ -217,7 +225,7 @@ if __name__ == '__main__':
         control_z_scores = control_z_scores.fillna(0)
     Tm_df = Tm_df.join(control_z_scores) #merge on index
 
-    #Find differences between smootehd and modeled data
+    #Find differences between smoothed and modeled data
     Tm_df['Tm_SE'] = Tm_df[['Smooth_Tm','Boltzmann_Tm']].sem(axis=1, skipna = False) #calculate std error between smoothed data and Boltzmann
     Tm_df['Tm_difference'] = (Tm_df['Boltzmann_Tm']-Tm_df['Smooth_Tm']).abs() #Find absolute difference between smoothed and boltzmann Tm
 
@@ -269,8 +277,11 @@ if __name__ == '__main__':
     # Apply the function to each group and concatenate the results
     Tm_df = pd.concat([final_decision(group) for _, group in grouped], ignore_index=True)
 
+    #Hide blanks
+    Tm_df['Final_decision'] = np.where(Tm_df['Well_type'] == 'Blank', 'Removed', Tm_df['Final_decision'])
+
     #next, we'll get a final Tm for all wells that have passed (ctrl and experi)
-    Tm_df['Final_Tm'] = np.where(Tm_df['Error'].str.contains('ailed'), np.NaN, Tm_df['Smooth_Tm']) #Report Smooth Tm as final Tm unless well failed
+    Tm_df['Final_Tm'] = np.where(Tm_df['Final_decision'] == 'Pass', Tm_df['Smooth_Tm'],np.NaN) #Report Smooth Tm as final Tm unless well failed
 
     #Get averages for control wells (DOES NOT INCLUDE FAILED WELLS)
     ctrl_df = Tm_df[Tm_df['Well_type'] == 'Control'].groupby(['Assay_Plate'],as_index=False)[['Final_Tm']].mean() #Get average ctrl Tm
@@ -303,12 +314,13 @@ if __name__ == '__main__':
     Tm_df['Diff from ctrl avg'] = Tm_df['Final_Tm'] - Tm_df['Avg_ctrl_melting_temp']
 
     well_type_df = Tm_df.loc[:, ['Unique_key', 'Well_type']]
-    decision_df = Tm_df.loc[:, ['Unique_key','Subplot','Final_decision','Error']]
+    decision_df = Tm_df.loc[:, ['Unique_key','Subplot','Final_decision','Error','Ctrl_Tm_z-score']]
     decision_df['Subplot'] = decision_df['Subplot'].astype(pd.Int64Dtype()).astype(str)
     decision_df['Subplot'] = decision_df['Subplot'].replace('<NA>', 'Original')
     final_curves0 = pd.merge(semifinal_curves,well_type_df, on = 'Unique_key', how = 'inner')
-    final_curves1 = pd.merge(final_curves0, Tm_df[['Unique_key','Source_Plate','Ctrl_Tm_z-score']],on = 'Unique_key', how = 'outer')
+    final_curves1 = pd.merge(final_curves0, Tm_df[['Unique_key','Source_Plate']],on = ['Unique_key'], how = 'outer')
     final_curves = pd.merge(final_curves1,decision_df, on = ['Unique_key','Subplot'], how = 'outer')
+    
     print("Calculations complete!")
 
     ################################
@@ -371,3 +383,10 @@ if __name__ == '__main__':
     plate_report.to_csv(output_dir_string+"/Plate_report.txt",sep="\t",index=False)
     well_error_count_df.to_csv(output_dir_string+"/Potential_problems.txt",sep="\t",index=False)
     print("Analysis complete!")
+
+end_time = time.time()
+tot_time = end_time -start_time
+no_plates = len(dfs)
+print("Total time for "+str(no_plates)+" plates: "+str(tot_time)+" seconds")
+final_memory = process.memory_info().rss
+print(f"Total memory usage: {final_memory / 10**3}KB")
