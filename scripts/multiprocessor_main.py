@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import argparse, sys, os, gc
+import argparse, sys, os
 from pathlib import Path
 import pandas as pd
 
@@ -14,7 +14,7 @@ parser.add_argument("-x", "--failed_control_wells", help="The number of controls
 parser.add_argument("-t", "--ctrl_tm_cutoff", help="Maximum z-score of ctrl curve melting temps", default = 1.5)
 parser.add_argument("-a", "--ctrl_amp_cutoff", help="Maximum z-score of ctrl curve amplitude", default = 3)
 parser.add_argument("-u", "--max_amp_cutoff", help="Maximum relative amplitude of curves allowed", default = 6)
-parser.add_argument("-l", "--min_amp_cutoff", help="Minimum relative amplitude of curves allowed", default = 0.25)
+parser.add_argument("-l", "--min_amp_cutoff", help="Minimum relative amplitude of curves allowed", default = 0.2)
 parser.add_argument("-s", "--smoothing_factor", help="Desired smoothing factor", default = 0.0005)
 parser.add_argument("-n", "--normalization", help="Should data be normalized, y or n", default = "y")
 
@@ -70,7 +70,7 @@ if __name__ == '__main__':
     # PART 1: Reading in and parsing the the experimental data 
     #
     ################################
-    print("Reading in concatenated data")
+    print("Concatenating data...smush, smush, smush...")
 
     import numpy as np
     try:
@@ -112,7 +112,7 @@ if __name__ == '__main__':
         map_raw_df['Unique_key'] = map_raw_df['Assay_Plate']+'_'+map_raw_df['Row']+map_raw_df['Column'] #Add in new column with generated unique key
         map_raw_df = map_raw_df.astype({'Column':'int'}) #Convert Column column to integer type
         map_raw_df.Fraction = map_raw_df.Fraction.fillna('NA')
-        print("Metadata successfully loaded. Onwards...")
+        print("Metadata successfully loaded. Onwards we trudge...")
     except: 
         print("A problem was encountered while parsing metadata. Please confirm that format is correct")
         sys.exit()
