@@ -8,7 +8,10 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 from dash.exceptions import PreventUpdate
 import numpy as np
-import math, argparse
+import math
+import argparse
+import urllib
+import json
 
 # Initialize the app
 app = Dash(__name__)
@@ -98,6 +101,7 @@ plate_report_style_data_conditional = [
 print("Reading in data. This can take a few minutes if processing many plates")
 df_results = pd.read_csv(args.input_dir+'/Final_results.txt', sep='\t', header = 0)
 df_results['Error'].fillna('', inplace=True)
+df_results['Fraction'].fillna(0, inplace=True)
 df_results['Well_zscore']=df_results['Well_zscore'].apply(lambda x:round(x,2))
 df_results['Relative_amplitude']=df_results['Relative_amplitude'].apply(lambda x:round(x,2))
 df_results['group'] = df_results['Assay_Plate'].apply(lambda x: df_results['Assay_Plate'].unique().tolist().index(x) // 16) #Assign group number to every 16 plates
@@ -111,7 +115,7 @@ print("Data read in. Let's goooo! ")
 
 ####################
 #
-# Generate default hot table
+# Generate default hit table
 #
 ####################
 
@@ -151,8 +155,8 @@ def generate_distribution_graph(y_axis_choice):
 
 def generate_selected_curve(selected_unique_key):
     selected_curve_data = df_curves[df_curves['Unique_key'] == selected_unique_key]
-    plate = selected_unique_key.split('_')[0]+'_'+selected_unique_key.split('_')[1]+'_'+selected_unique_key.split('_')[2]
-    well = selected_unique_key.split('_')[3]
+    plate = selected_unique_key.rsplit('_', 1)[0]
+    well = selected_unique_key.rsplit('_', 1)[-1]
     source_plate = selected_curve_data['Source_Plate'].unique()[0]
     original_selected = selected_curve_data[selected_curve_data['Subplot'] == 'Original']
     subplots_selected = selected_curve_data[(selected_curve_data['Subplot'] != 'Original')&(selected_curve_data['Final_decision'] == 'Pass')]
@@ -170,8 +174,8 @@ def generate_first_derivative_curve(selected_unique_key):
     selected_curve_data = df_curves[df_curves['Unique_key'] == selected_unique_key]
     avg_ctrl_Tm = df_results[df_results['Unique_key'] == selected_unique_key]['Avg_ctrl_melting_temp'].unique()[0]
     well_Tms = df_results[(df_results['Unique_key'] == selected_unique_key)&(df_results['Final_decision'] == 'Pass')]['Final_Tm'].unique()
-    plate = selected_unique_key.split('_')[0]+'_'+selected_unique_key.split('_')[1]+'_'+selected_unique_key.split('_')[2]
-    well = selected_unique_key.split('_')[3]
+    plate = selected_unique_key.rsplit('_', 1)[0]
+    well = selected_unique_key.rsplit('_', 1)[-1]
     source_plate = selected_curve_data['Source_Plate'].unique()[0]
     #Generating first deriv of original data
     orig_curve_coords = selected_curve_data[selected_curve_data["Subplot"] == 'Original']
