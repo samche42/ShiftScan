@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import argparse, sys, os
+import argparse, sys, os, gc
 from pathlib import Path
 import pandas as pd
 
