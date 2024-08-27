@@ -3,11 +3,10 @@
 import scipy.optimize as optimization
 from scipy.interpolate import splev, splrep
 from scipy.optimize import OptimizeWarning
-import warnings
+import warnings, sys
 from scipy.signal import find_peaks
 import numpy as np
 import pandas as pd
-import sys
 
 def find_inflection(x,y):
     deriv1 = np.gradient(y,x)
