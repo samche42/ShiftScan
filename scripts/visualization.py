@@ -8,10 +8,7 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 from dash.exceptions import PreventUpdate
 import numpy as np
-import math
-import argparse
-import urllib
-import json
+import math, argparse
 
 # Initialize the app
 app = Dash(__name__)
