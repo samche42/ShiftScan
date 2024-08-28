@@ -45,7 +45,7 @@ Metadata must be stored in the following format (Do not include control wells in
 
 The analysis pipeline can be run with :
 
-```python3 multiprocessor_main.py -i Mock_input/ -m Mock_metadata/file.csv -o Mock_output/```
+```python3 multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```
 
 where the parameters are:
 
@@ -80,6 +80,10 @@ Once complete, 4 files would have been generated in the specified output directo
 This step is optional. The visualization script should be run using the ```i``` parameter to point to the directory with the four files generated from the previous step. The script is run with:
 
 ```python3 visualization.py -i path/to/output/from/previous/step```
+
+e.g.
+
+```python3 visualization.py -i example_output/ ```
 
 This will start up a local Dash server, with a message like so:
 
