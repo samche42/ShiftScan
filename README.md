@@ -27,7 +27,7 @@ Please ensure your data follows the same format for a seamless analysis.
 
 #### Step 2: Metadata format
 
-Metadata must be stored in the following format (Do not include control wells in the metadata, these are assumed blank):
+Metadata must be stored in the following format (Do NOT include control wells in the metadata):
 
 | ASSAY_PLATE    | SOURCE_PLATE | WELL | COMPOUND    | FRACTION |
 |----------------|--------------|------|-------------|----------|
