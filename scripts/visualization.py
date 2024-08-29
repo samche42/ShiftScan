@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import dash
+import dash, math, argparse
 from dash import Dash, html, dcc, Input, Output, State, dash_table, callback_context
 import pandas as pd
 import plotly.express as px
@@ -8,10 +8,6 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 from dash.exceptions import PreventUpdate
 import numpy as np
-import math
-import argparse
-import urllib
-import json
 
 # Initialize the app
 app = Dash(__name__)
@@ -36,6 +32,8 @@ color3 = '#8D94BA'
 color4 = '#9A7AA0'
 color4_faded = '#d1b6d6' 
 color5 = '#87677B'
+main_header_bkgrd_color = '#e3e3e3'
+graph_gray = '#cacacf'
 
 base_style = {
     'border': '1px black',
@@ -164,7 +162,7 @@ def generate_selected_curve(selected_unique_key):
                  labels={'Temps': 'Temperature', 'Smooth Fluorescence': 'Normalized fluorescence'},
                 hover_name='Well', hover_data={'Final_decision':False, 'Assay_Plate':False, 'Temps':False, 'Smooth Fluorescence':False, 'Error':True}, #Hover data (Tooltip in Spotfire)
                 render_mode = 'auto', height = 500, title = 'Plate '+source_plate+', Well '+well+"<br><sup> Assay Plate: "+plate+"</sup>")
-    selected_curve_figure.add_scatter(x=original_selected['Temps'], y=original_selected['Smooth Fluorescence'],line={'color':'#cacacf','dash':'dot'}, name = 'Original data')
+    selected_curve_figure.add_scatter(x=original_selected['Temps'], y=original_selected['Smooth Fluorescence'],line={'color':graph_gray,'dash':'dot'}, name = 'Original data')
     selected_curve_figure.update_layout(title = {'font':{'size':15}})
     selected_curve_figure.data = selected_curve_figure.data[::-1]
     #selected_curve_figure.update_traces(marker_size=10)
@@ -199,7 +197,7 @@ def generate_first_derivative_curve(selected_unique_key):
                   color_discrete_sequence=[color3,color4,color2,color1],
                   labels={'Temps': 'Temperature', '1st_deriv': 'DF/DT'})
     # 3. Add in the 'original' curve as a line
-    fig.add_scatter(x=orig_deriv_df['Temps'], y=orig_deriv_df['1st_deriv'],line={'color':'#cacacf','dash':'dot'}, name = 'Original data')
+    fig.add_scatter(x=orig_deriv_df['Temps'], y=orig_deriv_df['1st_deriv'],line={'color':graph_gray,'dash':'dot'}, name = 'Original data')
     # 4. Add Avg ctrl Tm line
     fig.add_vline(x=avg_ctrl_Tm, line=dict(color='red', width=2, dash='dot'), name = 'Avg. ctrl Tm for plate')
     # 5. Add well final Tms
@@ -215,7 +213,7 @@ def generate_all_curves(unique_key_list):
     num_rows = math.ceil(len(unique_key_list)/10)
     height = 25*num_rows
     facet_row_max_spacing = 3/height
-    all_curves_figure = px.scatter(hit_curve_data_df, x='Temps', y='Smooth Fluorescence', color='Subplot', color_discrete_sequence=['#cacacf',color3,color4,color2,color1],
+    all_curves_figure = px.scatter(hit_curve_data_df, x='Temps', y='Smooth Fluorescence', color='Subplot', color_discrete_sequence=[graph_gray,color3,color4,color2,color1],
                         hover_name='Well', hover_data={'Final_decision':False, 'Assay_Plate':False, 'Temps':False, 'Smooth Fluorescence':False, 'Error':True, 'Ctrl_Tm_z-score':True}, #Hover data (Tooltip in Spotfire)
                         facet_col='Unique_key', facet_col_wrap=5, facet_col_spacing=0.08,facet_row_spacing = facet_row_max_spacing,#Facet plots by plate and only allow 2 columns. Column spacing had to be adjusted to allow for individual y-axes
                         render_mode = 'auto', height = height) #Height of plots is equal to half the number of plates (coz 2 columns) with each plot 300px high. Width will have to be adjusted
@@ -297,7 +295,7 @@ def update_heatmap(figure,facet_row_max_spacing,num_rows):
 ####################
 
 app.layout = html.Div([
-    html.H1('ShiftScan Viewer', style = {'background': '#e3e3e3','font-family': 'Arial','padding':'20px'}),
+    html.H1('ShiftScan Viewer', style = {'background': main_header_bkgrd_color,'font-family': 'Arial','padding':'20px'}),
     dcc.Tabs([
             #Result overview 
             dcc.Tab([
@@ -690,7 +688,7 @@ def update_hit_table(n_clicks, previous, current, zscore_cutoff, lower_value_amp
                 style_table = {'height':'250px','overflow-y':'scroll'},
                 style_cell={'fontSize':12, 'font-family':'Arial'},
                 css=[{"selector": ".show-hide", "rule": "display: none"}],  
-                style_header = {'backgroundColor': '#a6ed6f','fontWeight': 'bold'})
+                style_header = {'backgroundColor': color4,'fontWeight': 'bold'})
         header = html.Label("Total hits: "+str(filtered_df_count), style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'font-size': '20px', 'color':'dark green'}, id = 'hits_header')
         break1 = html.Hr(style = {'margin-bottom':'0px','width': '2%', 'margin-top':'2px', 'border':'0px white'})
         stabilizers = html.Label("Stabilizers: "+str(filtered_stabilizer_count), style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'font-size': '16px'}, id = 'stabilizer_header')
@@ -706,7 +704,7 @@ def update_hit_table(n_clicks, previous, current, zscore_cutoff, lower_value_amp
     Output('clear_pop_up_div','hidden')],
     [Input('results_table_datatable', 'active_cell'),
     Input('clear_popup','n_clicks')],
-    State('results_table_datatable', 'data'))
+    State('results_table_datatable', 'derived_viewport_data'))
 def update_selected_row_color(active,n_clicks, table_data):
     style = data_table_style_data_conditional.copy()
     ctx = callback_context
