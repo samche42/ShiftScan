@@ -3,7 +3,7 @@ Analysis and visualization of high-throughput DSF data
 
 #### Step 0: Installation
 
-Download/Clone all files from https://github.com/samche42/DSF_pipeline/tree/main/scripts
+Download/Clone all files from https://github.com/samche42/ShiftScan/tree/main/scripts
 
 Create DSF conda anv using ```conda env create --file=shiftscan.yml```
 
