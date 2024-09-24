@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
 
-import argparse, sys, os, gc
+import argparse
+import sys
 from pathlib import Path
+import os
 import pandas as pd
+import time
+import gc 
+import psutil
+
+start_time = time.time()
+process = psutil.Process(os.getpid())
+initial_memory = process.memory_info().rss
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input_dir", help="Full file path to directory with input files")
@@ -304,6 +313,12 @@ if __name__ == '__main__':
     #Finding difference between well and ctrl average
     Tm_df['Diff from ctrl avg'] = Tm_df['Final_Tm'] - Tm_df['Avg_ctrl_melting_temp']
 
+    #Finding no. std devs (z-score) - i.e. the traditional route for finding hits
+    plate_std_dev = Tm_df[Tm_df['Final_Tm'].notna()].groupby('Assay_Plate')['Final_Tm'].std().reset_index()
+    plate_std_dev.rename(columns={'Final_Tm': 'Plate_Std_Dev'}, inplace=True)
+    Tm_df = pd.merge(Tm_df, plate_std_dev, on = 'Assay_Plate')
+    Tm_df['Std. devs from ctrl mean'] = (Tm_df['Final_Tm']- Tm_df['Avg_ctrl_melting_temp'])/Tm_df['Plate_Std_Dev']
+
     well_type_df = Tm_df.loc[:, ['Unique_key', 'Well_type']]
     decision_df = Tm_df.loc[:, ['Unique_key','Subplot','Final_decision','Error','Ctrl_Tm_z-score']]
     decision_df['Subplot'] = decision_df['Subplot'].astype(pd.Int64Dtype()).astype(str)
@@ -374,3 +389,10 @@ if __name__ == '__main__':
     plate_report.to_csv(output_dir_string+"/Plate_report.txt",sep="\t",index=False)
     well_error_count_df.to_csv(output_dir_string+"/Potential_problems.txt",sep="\t",index=False)
     print("Analysis complete!")
+
+end_time = time.time()
+tot_time = end_time -start_time
+no_plates = len(dfs)
+print("Total time for "+str(no_plates)+" plates: "+str(tot_time)+" seconds")
+final_memory = process.memory_info().rss
+print(f"Total memory usage: {final_memory / 10**3}KB")

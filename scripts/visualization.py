@@ -100,9 +100,11 @@ print("Reading in data. This can take a few minutes if processing many plates")
 df_results = pd.read_csv(args.input_dir+'/Final_results.txt', sep='\t', header = 0)
 df_results['Error'].fillna('', inplace=True)
 df_results['Fraction'].fillna(0, inplace=True)
-df_results['Well_zscore']=df_results['Well_zscore'].apply(lambda x:round(x,2))
-df_results['Relative_amplitude']=df_results['Relative_amplitude'].apply(lambda x:round(x,2))
 df_results['group'] = df_results['Assay_Plate'].apply(lambda x: df_results['Assay_Plate'].unique().tolist().index(x) // 16) #Assign group number to every 16 plates
+
+columns_to_round = ['Well_zscore','Relative_amplitude','Diff from ctrl avg', 'Final_Tm', 'Std. devs from ctrl mean', 'Avg_ctrl_melting_temp','Min_ctrl_zscore_for_plate','Max_ctrl_zscore_for_plate']
+df_results = df_results.assign(**{col: df_results[col].apply(lambda x: round(x, 2)) for col in columns_to_round})
+
 groups_df = df_results.loc[:, ['Assay_Plate', 'group']].drop_duplicates()
 df_curves = pd.read_csv(args.input_dir+'/Final_curves.txt', sep='\t', header = 0)
 df_curves = pd.merge(df_curves,groups_df, how = 'outer', on='Assay_Plate')
@@ -118,12 +120,11 @@ print("Data read in. Let's goooo! ")
 ####################
 
 original_df  = df_results[(df_results['Well_type'] != 'Control')&(df_results['Plate_status'] == 'OK')&(df_results['Error'] == '')]
-small_df = original_df.loc[:, ['Source_Plate','Well','Subplot','Compound','Fraction','Final_Tm','Well_zscore', 'Relative_amplitude','Max_ctrl_zscore_for_plate','Min_ctrl_zscore_for_plate','Diff from ctrl avg','Unique_key','Unique_key_subplot','group']]
+small_df = original_df.loc[:, ['Source_Plate','Well','Subplot','Compound','Fraction','Final_Tm','Well_zscore', 'Std. devs from ctrl mean','Diff from ctrl avg','Relative_amplitude','Max_ctrl_zscore_for_plate','Min_ctrl_zscore_for_plate','Unique_key','Unique_key_subplot','group']]
 small_df.loc[:,"Hit"] = np.where((small_df['Well_zscore'] > small_df['Max_ctrl_zscore_for_plate'])|
                                  (small_df['Well_zscore'] < small_df['Min_ctrl_zscore_for_plate']),
                                 "Hit","Not a hit")
 filtered_df = small_df[((small_df.Hit == 'Hit'))&((small_df.Relative_amplitude <= 1.5)&(small_df.Relative_amplitude >= 0.5))]
-filtered_df = filtered_df.assign(**{'Diff from ctrl avg': filtered_df['Diff from ctrl avg'].apply(lambda x: round(x, 2))})
 filtered_df.loc[:,'Influence'] = np.where(filtered_df['Diff from ctrl avg'] > 0, "Stabilizer","Destabilizer")
 filtered_df_count = filtered_df.shape[0]
 filtered_stabilizer_count = filtered_df['Influence'].value_counts().get('Stabilizer', 0)
@@ -238,7 +239,7 @@ def generate_barplot(df,x_axis, color_by):
 def generate_scatterplot():
     figure = px.strip(df_results, x = 'Platename',y = 'Final_Tm', color = 'Hit', color_discrete_sequence=[color2,color3,color4],
                       labels={'Final_Tm': 'Melting temp', 'Platename': 'Plate'},
-                      hover_data={'Well':True, 'Well_zscore':True, 'Relative_amplitude':True,'Max_ctrl_zscore_for_plate':True,'Min_ctrl_zscore_for_plate':True,'Avg_ctrl_melting_temp':True,'Diff from ctrl avg':True})
+                      hover_data={'Well':True, 'Well_zscore':True, 'Relative_amplitude':True,'Avg_ctrl_melting_temp':True,'Diff from ctrl avg':True, 'Std. devs from ctrl mean':True,'Max_ctrl_zscore_for_plate':True,'Min_ctrl_zscore_for_plate':True})
     figure.update_xaxes(tickfont=dict(size=8), tickangle=90)
     figure.update_layout(margin=dict(l=20, r=20, t=5, b=5), height=350) #Reduce enormous default margins
     figure.update_traces(marker_size=10)
@@ -412,7 +413,7 @@ app.layout = html.Div([
                             sort_action='native',
                             export_format='xlsx',
                             style_data_conditional=data_table_style_data_conditional, 
-                            style_table = {'height':'200px','overflow-y':'scroll'},
+                            style_table = {'height':'250px','overflow-y':'scroll'},
                             style_as_list_view=True, style_cell={'fontSize':12, 'font-family':'Arial'}, style_header = {'backgroundColor': color4,'fontWeight': 'bold'}),#Styling of table
                         ], id = 'results_table'),
                         html.Hr(style = {'margin-bottom':'0px','width': '2%', 'margin-top':'2px', 'border':'15px white'}), #Break
@@ -428,21 +429,54 @@ app.layout = html.Div([
                 
                 #Child B: Cut off boxes and pop up graph
                 html.Div([
-                    #Child 1
+                    #Child1
+                    html.Div([
+                                html.H5('Hit defined by:',style = {'font-family': 'Arial','margin-bottom':'5px', 'margin-top':'0px', 'margin-right':'2px'}),
+                                dcc.RadioItems(id = 'hit_type', 
+                                                    options = [
+                                                            {'label':'Z-score distribution', 'value':'zscore'},
+                                                            {'label':'Std dev from ctrl mean', 'value':'stddev'},
+                                                            {'label':'Degrees', 'value':'degrees'},
+                                                            ], value = 'zscore', inline = True,
+                                                            style = {'font-family': 'Arial', 'margin-bottom':'15px','margin-top':'7px','fontSize':12}),
+                                html.Hr(style = {'margin-bottom':'5px','width': '100%'}),
+                            ]),
+                    #Child 2: z-score options
                     html.Div([
                                 #Child 1.1: Main z-score header
-                                html.H5('% beyond ctrl z-score range:',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px'}),#
+                                html.H5('% beyond ctrl z-score range:',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'margin-right':'2px'}, id = 'zscore_header'),#
                                 #Child 1.2: Upper z-score cutoff header and box
                                 html.Div([
-                                        html.H6('Cutoff:',style = {'font-family': 'Arial','margin-bottom':'5px','margin-top':'7px'}),#
+                                        html.H6('Cutoff:',style = {'font-family': 'Arial','margin-bottom':'5px','margin-top':'7px'}, id = 'zscore_cutoff_header'),#
                                         dcc.Input(id='relative_zscore_cutoff', name = 'Cutoff', type='number', value = 0,style = {'font-family': 'Arial','width':'50px','margin-top':'5px'})],#
                                     style = {'display':'inline-block','vertical-align':'top', 'margin-top':'0px', 'margin-bottom':'5px'}),#Child 1.2 style
-                            ],style = {'display':'inline-block','vertical-align':'top', 'width':'30%', 'margin-top':'0px', 'margin-bottom':'15px'}), #Child 1 style
-                    #Child 2
+                            ],style = {'display':'inline-block','vertical-align':'top', 'width':'33%', 'margin-top':'0px', 'margin-bottom':'5px'}), #Child 2 style
+                    #Child 3: Std dev options
+                    html.Div([
+                                #Child 1.1: Main stddev header
+                                html.H5('No. of std devs from ctrl mean:',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'margin-right':'2px','color':'grey'}, id = 'stddev_header'),#
+                                #Child 1.2: Stddev cutoff header and box
+                                html.Div([
+                                        html.H6('Cutoff:',style = {'font-family': 'Arial','margin-bottom':'5px','margin-top':'7px','color':'grey'}, id = 'stddev_cutoff_header'),#
+                                        dcc.Input(id='relative_stddev_cutoff', name = 'Cutoff', type='number', value = 3, disabled=True,style = {'font-family': 'Arial','width':'50px','margin-top':'5px'})],#
+                                    style = {'display':'inline-block','vertical-align':'top', 'margin-top':'0px', 'margin-bottom':'5px'}),#Child 1.2 style
+                            ],style = {'display':'inline-block','vertical-align':'top', 'width':'33%', 'margin-top':'0px', 'margin-bottom':'5px'}), #Child 3 style
+                    #Child 4: Degrees options
+                    html.Div([
+                                #Child 1.1: Main degree header
+                                html.H5('Degrees from avg. ctrl Tm:',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'margin-right':'2px','color':'grey'}, id = 'degree_header'),#
+                                #Child 1.2: Upper z-score cutoff header and box
+                                html.Div([
+                                        html.H6('Cutoff:',style = {'font-family': 'Arial','margin-bottom':'5px','margin-top':'7px','color':'grey'}, id = 'degree_cutoff_header'),#
+                                        dcc.Input(id='relative_degree_cutoff', name = 'Cutoff', type='number', value = 2, disabled=True,style = {'font-family': 'Arial','width':'50px','margin-top':'5px'})],#
+                                    style = {'display':'inline-block','vertical-align':'top', 'margin-top':'0px', 'margin-bottom':'5px'}),#Child 1.2 style
+                            ],style = {'display':'inline-block','vertical-align':'top', 'width':'33%', 'margin-top':'0px', 'margin-bottom':'5px'}), #Child 4 style
+                    html.Hr(style = {'margin-bottom':'5px','width': '100%'}),
+                    #Child 3
                     html.Div([
                             #Child 2.1: Main amplitude header
                             html.H5('Relative amplitude cutoffs:',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px'}),
-                            html.H6('*The relative amplitude of the hit must be between these two values',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px'}),
+                            #html.H6('*The relative amplitude of the hit must be between these two values',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px'}),
                             #Child 2.2.: Upper amplitude cutoff header and box
                             html.Div([
                                     html.H6('Upper cutoff:',style = {'font-family': 'Arial','margin-bottom':'5px','margin-top':'7px'}),#
@@ -454,8 +488,9 @@ app.layout = html.Div([
                                     dcc.Input(id='lower_limit_amp', name = 'Lower cutoff', type='number', value = 0.5, style = {'font-family': 'Arial', 'width':'50px','margin-top':'5px'})],#
                                 style = {'display':'inline-block','vertical-align':'top', 'margin-top':'0px', 'margin-bottom':'5px','margin-left': '30px'}), #Child 2.3 style
                             ],style = {'display':'inline-block','vertical-align':'top', 'width':'40%', 'margin-top':'0px', 'margin-bottom':'5px'}), #Child 2 style
-                    #Child 3
+                    #Child 4
                     html.Div([
+                            html.H5('Interaction type:',style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px'}),
                             dbc.RadioItems(id = 'hit_filter', 
                                             options = [
                                                     {'label':'All hits', 'value':'all'},
@@ -466,11 +501,11 @@ app.layout = html.Div([
                             ],
                             style = {'display':'inline-block','vertical-align':'top', 'width':'30%', 'margin-top':'0px', 'margin-bottom':'5px'}),
                     #Submit button
-                    #Child 4: Submit button
+                    #Child 5: Submit button
                     html.Div([html.Button('Update', id='submit', n_clicks=0)]),
-                    #Child 5: Horizontal break
+                    #Child 6: Horizontal break
                     html.Hr(style = {'margin-bottom':'0px','width': '100%'}),
-                    #Child 6: POPUP GRAPH
+                    #Child 7: POPUP GRAPH
                     html.Div([
                         html.Div([],id = 'popup3',style = {'display':'inline-block','vertical-align':'top', 'width':'50%'}),
                         html.Div([],id = 'popup4',style = {'display':'inline-block','vertical-align':'top', 'width':'50%'}),
@@ -620,28 +655,69 @@ def update_popup(clickData):
 #TAB 4 visualizations
 ####################
 
+# En/Dis-able options based on hit ID choice
+@app.callback(
+    Output('relative_zscore_cutoff', 'disabled'),
+    Output('relative_stddev_cutoff', 'disabled'),
+    Output('relative_degree_cutoff', 'disabled'),
+    Output('zscore_header', 'style'),
+    Output('stddev_header', 'style'),
+    Output('degree_header', 'style'),
+    Output('zscore_cutoff_header', 'style'),
+    Output('stddev_cutoff_header', 'style'),
+    Output('degree_cutoff_header', 'style'),
+    Input('hit_type', 'value'),
+    prevent_initial_call=True)
+def hit_choice_option_enabled(hit_choice_value):
+    header_disabled_style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'margin-right':'2px','color':'grey'}
+    header_enabled_style = {'font-family': 'Arial','margin-bottom':'1px', 'margin-top':'0px', 'margin-right':'2px','color':'black'}
+    cutoff_enabled_style = {'font-family': 'Arial','margin-bottom':'5px','margin-top':'7px'}
+    cutoff_disabled_style = {'font-family': 'Arial','margin-bottom':'5px','margin-top':'7px', 'color': 'grey'}
+    if hit_choice_value == 'zscore':
+        return False, True, True, header_enabled_style, header_disabled_style, header_disabled_style, cutoff_enabled_style, cutoff_disabled_style, cutoff_disabled_style
+    elif hit_choice_value == 'stddev':
+        return True, False, True, header_disabled_style, header_enabled_style, header_disabled_style, cutoff_disabled_style, cutoff_enabled_style, cutoff_disabled_style
+    elif hit_choice_value == 'degrees':
+        return True, True, False, header_disabled_style, header_disabled_style, header_enabled_style, cutoff_disabled_style, cutoff_disabled_style, cutoff_enabled_style
+    else:
+        return True, True, True, header_disabled_style, cutoff_disabled_style, cutoff_disabled_style, cutoff_disabled_style
+
 #Update hit table based on input box values
 @app.callback(
     Output('results_table', 'children'),
     Input('submit', 'n_clicks'),
     Input('results_table_datatable', 'data_previous'),
     State('results_table_datatable', 'data'),
+    Input('hit_type', 'value'),
     State('relative_zscore_cutoff', 'value'),
+    State('relative_stddev_cutoff', 'value'),
+    State('relative_degree_cutoff', 'value'),
     State('lower_limit_amp', 'value'),
     State('upper_limit_amp', 'value'),
     State('hit_filter','value'),
     State('results_table_datatable', 'derived_viewport_data'),
     prevent_initial_call=True)
-def update_hit_table(n_clicks, previous, current, zscore_cutoff, lower_value_amp, upper_value_amp, hit_option, view):
+def update_hit_table(n_clicks, previous, current, hit_choice_value, zscore_cutoff, stddev_cutoff, degree_cutoff, lower_value_amp, upper_value_amp, hit_option, view):
     if ((n_clicks < 1)&(previous is None)) | ((n_clicks >= 1)&(previous is None)) :
         original_df  = df_results[(df_results['Well_type'] != 'Control')&(df_results['Plate_status'] == 'OK')&(df_results['Error'] == '')]
-        small_df = original_df.loc[:, ['Source_Plate','Well','Subplot','Compound','Fraction','Final_Tm','Well_zscore', 'Relative_amplitude','Max_ctrl_zscore_for_plate','Min_ctrl_zscore_for_plate','Diff from ctrl avg','Unique_key','Unique_key_subplot']]
-        cutoff = zscore_cutoff/100
-        small_df.loc[:,"Hit"] = np.where((small_df['Well_zscore'] > small_df['Max_ctrl_zscore_for_plate'] + ((small_df['Max_ctrl_zscore_for_plate'].abs())*cutoff))|
-                                         (small_df['Well_zscore'] < small_df['Min_ctrl_zscore_for_plate'] - ((small_df['Min_ctrl_zscore_for_plate'].abs())*cutoff)),
-                                        "Hit","Not a hit")
+        #small_df = original_df.loc[:, ['Source_Plate','Well','Subplot','Compound','Fraction','Final_Tm','Well_zscore', 'Relative_amplitude','Max_ctrl_zscore_for_plate','Min_ctrl_zscore_for_plate','Diff from ctrl avg','Std. devs from ctrl mean','Unique_key','Unique_key_subplot']]
+        small_df = original_df.loc[:, ['Source_Plate','Well','Subplot','Compound','Fraction','Final_Tm','Well_zscore', 'Std. devs from ctrl mean','Diff from ctrl avg','Relative_amplitude','Max_ctrl_zscore_for_plate','Min_ctrl_zscore_for_plate','Unique_key','Unique_key_subplot','group']]
+        if hit_choice_value == 'zscore':
+            cutoff = zscore_cutoff/100
+            small_df.loc[:,"Hit"] = np.where((small_df['Well_zscore'] > small_df['Max_ctrl_zscore_for_plate'] + ((small_df['Max_ctrl_zscore_for_plate'].abs())*cutoff))|
+                                             (small_df['Well_zscore'] < small_df['Min_ctrl_zscore_for_plate'] - ((small_df['Min_ctrl_zscore_for_plate'].abs())*cutoff)),
+                                            "Hit","Not a hit")
+        elif hit_choice_value == 'stddev':
+            small_df.loc[:,"Hit"] = np.where((small_df['Std. devs from ctrl mean'] > stddev_cutoff)|
+                                             (small_df['Std. devs from ctrl mean'] < -stddev_cutoff),
+                                            "Hit","Not a hit")
+        elif hit_choice_value == 'degrees':
+            small_df.loc[:,"Hit"] = np.where((small_df['Diff from ctrl avg'] > degree_cutoff)|
+                                             (small_df['Diff from ctrl avg'] < -degree_cutoff),
+                                            "Hit","Not a hit")
+        else:
+            pass
         filtered_df = small_df[((small_df.Hit == 'Hit'))&((small_df.Relative_amplitude <= upper_value_amp)&(small_df.Relative_amplitude >= lower_value_amp))]
-        filtered_df = filtered_df.assign(**{'Diff from ctrl avg': filtered_df['Diff from ctrl avg'].apply(lambda x: round(x, 2))})
         filtered_df.loc[:,'Influence'] = np.where(filtered_df['Diff from ctrl avg'] > 0, "Stabilizer","Destabilizer")
         if hit_option == 'stabilizers':
             filtered_df = filtered_df[filtered_df['Influence'] == 'Stabilizer']
