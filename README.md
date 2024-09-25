@@ -2,7 +2,7 @@
 Analysis and visualization of high-throughput DSF data
 
 #### Installation and usage video
-A very brief video of ShiftScan installation (conda already installed) is available on YouTube: https://youtu.be/shN0vUHEGOk
+A very brief video of ShiftScan installation (conda already installed) and usage is available on YouTube: https://youtu.be/shN0vUHEGOk
 
 #### Step 0: Installation
 
