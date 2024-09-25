@@ -6,7 +6,9 @@ A very brief video of ShiftScan installation (conda already installed) is availa
 
 #### Step 0: Installation
 
-Download/Clone all files from https://github.com/samche42/ShiftScan/tree/main/scripts
+Download/Clone all files from https://github.com/samche42/ShiftScan/tree/main/scripts with ```git clone https://github.com/samche42/ShiftScan.git```
+
+Move into the scripts subfolder in the Shiftscan folder (```cd ShiftScan/scripts/ ```)
 
 Create DSF conda anv using ```conda env create --file=shiftscan.yml```
 
