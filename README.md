@@ -92,9 +92,16 @@ e.g.
 
 This will start up a local Dash server, with a message like so:
 
->Dash is running on http://127.0.0.1:8050/
->
-> * Serving Flask app 'visualization'
-> * Debug mode: on
+```
+Dash is running on http://0.0.0.0:8050/
 
-Navigate to the link provided in your web browser
+ * Serving Flask app 'visualization'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8050
+ * Running on http://10.162.203.135:8050
+Press CTRL+C to quit
+```
+
+Navigate to the link provided (e.g. http://127.0.0.1:8050 in this case) in your web browser
