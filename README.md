@@ -74,6 +74,9 @@ Additionally, there are some additional parameters you can provide if you would 
 
 The processing of data can take some time depending on the number of plates included in the analysis. If you're using 4 CPUs, processing 100 plates (384-well) takes around 7 minutes. Please see the associated manuscript for additional details on performance. 
 
+> [!IMPORTANT]
+>Several warnings will potentially be raised during running. These are all handled within the script. Unless they actually crash the program, these have been handled and are **NOT** a concern. As soon as I figure out out to stop those being printed out (but still raised for the script to deal with the problem)I'll fix that
+
 Once complete, 4 files would have been generated in the specified output directory:
  - "Final_curves.txt" includes all coordinates for original and cleaned/sliced curves
  - "Final_results.txt" has results from all calculations, including final melting temperatures, amplitudes, failures, reasons for failures etc
