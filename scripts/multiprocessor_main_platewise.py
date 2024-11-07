@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
 
-import argparse, sys,os, glob, time, gc, psutil, tracemalloc, multiprocessing
+import argparse, sys,os, glob, time, gc, multiprocessing
 from pathlib import Path
 import pandas as pd
 import numpy as np
 from multiprocessing import cpu_count
 from functools import partial
 from DSF_functions import slice_list, clean_curve, split_curves,add_curve_data, boltzmann_sigmoid, initial_params, Model_data, process_well
-
-start_time = time.time()
-tracemalloc.start()
-process = psutil.Process(os.getpid())
-initial_memory = process.memory_info().rss
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input_dir", help="Full file path to directory with input files")
@@ -26,6 +21,7 @@ parser.add_argument("-u", "--max_amp_cutoff", help="Maximum relative amplitude o
 parser.add_argument("-l", "--min_amp_cutoff", help="Minimum relative amplitude of curves allowed", default = 0.25)
 parser.add_argument("-s", "--smoothing_factor", help="Desired smoothing factor", default = 0.0005)
 parser.add_argument("-n", "--normalization", help="Should data be normalized, y or n", default = "y")
+parser.add_argument("--only_tm", action='store_true', help = "Flag to enable only Tm calling mode")
 
 args = parser.parse_args()
 
@@ -163,6 +159,13 @@ for plate in Path(args.input_dir).glob('*.txt'):
 
     #Generate Tm df
     Tm_df = pd.DataFrame(all_tm_rows)
+
+    # CHECKPOINT: If the flag has been included the intermediate output will be saved and the script terminated
+    if args.only_tm:
+        Tm_df.to_csv(output_dir_string+"/Only_Tm_values.txt",sep="\t",index=False)
+        print("User selected to only estimate Tm values. Output file generated and exiting now")
+        sys.exit()
+
 
     ################################
     #
