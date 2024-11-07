@@ -58,6 +58,9 @@ where the parameters are:
 - ```-m``` A tab-delimited file with metadata for all experimental wells. If a compound value is left blank, it is assumed that the well is empty and is not assessed.
 - ```-o``` The path to the desired output folder. If it does not exist, a folder will be created with the name specified in this path
 
+> [!NOTE]
+> If you only want the Tm values estimated and no further comparison or analysis, you can add the ```--only_tm``` flag, which will stop the pipeline early and generate a single output file with The estimated Tm value per sigmoidal region detected. This output will **not** work with the companion tool
+
 Additionally, there are some additional parameters you can provide if you would like to tweak how the data is processed
 
 - ```-c``` A comma-delimited list of which columns contain your controls (Default:  "1,2")
