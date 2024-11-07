@@ -9,15 +9,15 @@ import numpy as np
 import pandas as pd
 
 def find_inflection(x,y):
-    deriv1 = np.gradient(y,x)
-    deriv2 = list(np.gradient(deriv1,x))
-    for i in range(len(deriv2) - 1):
+    deriv1 = np.gradient(y,x) #Find first deriv
+    deriv2 = list(np.gradient(deriv1,x)) #Find second deriv
+    for i in range(len(deriv2) - 1): #Start looking for a sign change
         if deriv2[i] * deriv2[i+1] < 0:
-            x_zero = x[i] - deriv2[i] * (x[i+1] - x[i]) / (deriv2[i+1] - deriv2[i])
+            x_zero = x[i] - deriv2[i] * (x[i+1] - x[i]) / (deriv2[i+1] - deriv2[i]) #Find x-coord when sign flips = inflection
             return x_zero
 
 def concatenate_files(files, output_dir_string, output_filename):
-    dfs = list() #Empty list of all files (converted to dfs)
+    dfs = list() 
     for file in files:
         data = pd.read_csv(output_dir_string+"/"+file, sep='\t',header=0)
         dfs.append(data)
@@ -29,7 +29,7 @@ def slice_list(positions,input_list):
 	for i in range(len(positions)-1):
 		start = positions[i]
 		end = positions[i + 1]
-		returned_list.append(input_list[start:end])
+		returned_list.append(input_list[start:end]) #Gneerate new list of coord lists for each slice position pair
 	return returned_list
 
 def clean_curve(x,spl):
@@ -41,8 +41,8 @@ def clean_curve(x,spl):
 	index_positions = np.sort(np.append(index_positions, [0,len(pred_y)])) #Add in 0 and last position of coordinates
 	x_slices = slice_list(index_positions, pred_x) #Slice x-coordinates at minima and maxima
 	y_slices = slice_list(index_positions, pred_y) #Slice y-coordinates at minima and maxima
-	x_slices = [sublist for sublist in x_slices if len(sublist) >= 5] #Remove any coord list with less than 20 data points
-	y_slices = [sublist for sublist in y_slices if len(sublist) >= 5] #Remove any coord list with less than 20 data points
+	x_slices = [sublist for sublist in x_slices if len(sublist) >= 5] #Remove any coord list with less than 5 data points
+	y_slices = [sublist for sublist in y_slices if len(sublist) >= 5] #Remove any coord list with less than 5 data points
 	clean_x_list = []
 	clean_y_list = []
 	for i in range(len(x_slices)):
@@ -59,7 +59,7 @@ def clean_curve(x,spl):
 		pos_perc = pos_count/total_count*100
 		if average_slope < 0:
 			continue #If average slope is negative do not add it to final list
-		elif (neg_perc < 10)|(pos_perc <10): #If less than 10% of values of the 2nd deriv gradient are either positive or negative, the segment isn't sigmoidal and we shouldn't save it as a lefit curve
+		elif (neg_perc < 10)|(pos_perc <10): #If less than 10% of values of the 2nd deriv gradient are either positive or negative, the segment isn't sigmoidal and we shouldn't save it as a legit curve
 			continue
 		else:
 			clean_x_list.append(x_slices[i])
