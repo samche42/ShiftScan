@@ -123,8 +123,8 @@ def generate_Tm_heatmap(df, facet_row_max_spacing):
                                 render_mode = 'auto')
     return figure
 
-def update_heatmap(figure,facet_row_max_spacing,num_rows):
-    figure.update_traces(marker={'symbol': 'square', 'size':25, 'line':{'color':'grey','width':1}})
+def update_heatmap(figure,facet_row_max_spacing,num_rows,size_option):
+    figure.update_traces(marker={'symbol': 'square', 'size':size_option, 'line':{'color':'grey','width':1}})
     figure.update_yaxes(autorange='reversed',showgrid=False, zeroline=False) #Get y-axis to go from A to Z, and remove all gridlines
     figure.update_xaxes(showgrid=False, zeroline=False) #Remove all gridlines
     figure.update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0)'}) #Make plot backgrounds transparent
@@ -199,12 +199,17 @@ def enable_options(tabValue):
 def generate_heatmaps(tabValue):
     if tabValue == 'tab-3':
         no_plates = df_results['Assay_Plate'].nunique()
+        no_wells = df_results['Well'].nunique()
+        if no_wells <= 96:
+            size = 50
+        else:
+            size = 25
         if no_plates <= 16:
             num_rows = math.ceil(no_plates)
             height = 50*num_rows
             facet_row_max_spacing = 6/height
             figure = generate_Tm_heatmap(df_results, facet_row_max_spacing)
-            updated_figure = update_heatmap(figure, facet_row_max_spacing,num_rows)
+            updated_figure = update_heatmap(figure, facet_row_max_spacing,num_rows,size)
             return updated_figure
         else:
             list_of_subdataframes = [d for _, d in subdata.groupby('group')] #Separate plates into groups of 16 plates
@@ -214,7 +219,7 @@ def generate_heatmaps(tabValue):
             sub_height = 50*sub_num_rows
             facet_row_max_spacing = 6/sub_height
             figure = generate_Tm_heatmap(chosen_df, facet_row_max_spacing)
-            updated_figure = update_heatmap(figure, facet_row_max_spacing,sub_num_rows)
+            updated_figure = update_heatmap(figure, facet_row_max_spacing,sub_num_rows,size)
             return updated_figure
     else:
         raise PreventUpdate
