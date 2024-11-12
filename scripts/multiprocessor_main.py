@@ -12,7 +12,7 @@ parser.add_argument("-c", "--control_cols", help="The column numbers of your con
 parser.add_argument("-o", "--output_dir", help="Full path to desired output directory", default = "./")
 parser.add_argument("-x", "--failed_control_wells", help="The number of controls allowed to fail before a plate is failed", default = 8)
 parser.add_argument("-t", "--ctrl_tm_cutoff", help="Maximum z-score of ctrl curve melting temps", default = 1.5)
-parser.add_argument("-a", "--ctrl_amp_cutoff", help="Maximum z-score of ctrl curve amplitude", default = 3)
+parser.add_argument("-a", "--ctrl_amp_cutoff", help="Maximum z-score of ctrl curve amplitude", default = 2)
 parser.add_argument("-u", "--max_amp_cutoff", help="Maximum relative amplitude of curves allowed", default = 6)
 parser.add_argument("-l", "--min_amp_cutoff", help="Minimum relative amplitude of curves allowed", default = 0.2)
 parser.add_argument("-s", "--smoothing_factor", help="Desired smoothing factor", default = 0.0005)
@@ -202,6 +202,7 @@ if __name__ == '__main__':
     # CHECKPOINT: If the flag has been included the intermediate output will be saved and the script terminated
     if args.only_tm:
         Tm_df.to_csv(output_dir_string+"/Only_Tm_values.txt",sep="\t",index=False)
+        semifinal_curves.to_csv(output_dir_string+"/Only_Tm_curves.txt",sep="\t",index=False)
         print("User selected to only estimate Tm values. Output file generated and exiting now")
         sys.exit()
 

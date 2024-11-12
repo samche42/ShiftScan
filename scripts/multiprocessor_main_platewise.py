@@ -163,6 +163,7 @@ for plate in Path(args.input_dir).glob('*.txt'):
     # CHECKPOINT: If the flag has been included the intermediate output will be saved and the script terminated
     if args.only_tm:
         Tm_df.to_csv(output_dir_string+"/Only_Tm_values.txt",sep="\t",index=False)
+        semifinal_curves.to_csv(output_dir_string+"/Only_Tm_curves.txt",sep="\t",index=False)
         print("User selected to only estimate Tm values. Output file generated and exiting now")
         sys.exit()
 
