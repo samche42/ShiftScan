@@ -6,7 +6,9 @@ A very brief video of ShiftScan installation (conda already installed) and usage
 
 #### Step 0: Installation
 
-Download/Clone all files from https://github.com/samche42/ShiftScan/tree/main/scripts with ```git clone https://github.com/samche42/ShiftScan.git```
+Download/Clone all files from https://github.com/samche42/ShiftScan/tree/main/scripts with: 
+
+```git clone https://github.com/samche42/ShiftScan.git```
 
 Move into the scripts subfolder in the Shiftscan folder (```cd ShiftScan/scripts/ ```)
 
@@ -28,7 +30,8 @@ Currently, the pipeline is designed to take in files with the following raw data
 | 84.49 | 4.552895136  | 84.49 | 4.995465156  | 84.49 | 5.397218846  | 84.49 | 5.445511766  |
 | 84.76 | 4.560226904  | 84.76 | 4.991807996  | 84.76 | 5.404517462  | 84.76 | 5.471008942  |
 
-Please ensure your data follows the same format for a seamless analysis.
+> [!IMPORTANT]
+> Please ensure your data follows the same format for a seamless analysis.
 
 #### Step 2: Metadata format
 
@@ -59,7 +62,9 @@ where the parameters are:
 - ```-o``` The path to the desired output folder. If it does not exist, a folder will be created with the name specified in this path
 
 > [!NOTE]
-> If you only want the Tm values estimated and no further comparison or analysis, you can add the ```--only_tm``` flag, which will stop the pipeline early and generate a single output file with The estimated Tm value per sigmoidal region detected. This output will **not** work with the companion tool
+> If you only want the Tm values estimated and no further comparison or analysis, you can add the ```--only_tm``` flag, which will stop the pipeline early and generate a single output file with The estimated Tm value per sigmoidal region detected. This output will **not** work with the default companion tool (See later for details for visualization). Example code to use:
+> 
+> ```python3 multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/ --only_tm```
 
 Additionally, there are some additional parameters you can provide if you would like to tweak how the data is processed
 
@@ -67,24 +72,24 @@ Additionally, there are some additional parameters you can provide if you would 
 - ```-p``` The number of processors you wish to use (Default: 4)
 - ```-x``` The maximum number of control wells allowed to fail per plate. E.g. At default, if 9 control wells fail, the plate is failed. (Default: 8)
 - ```-t``` The maximum z-score of control melting temperatures tolerated. I.e. At default, if the z-score of a control well melting temp is 1.6 the well is failed. (Default: 1.5)
-- ```-a``` The maximum z-score of control melting curve amplitudes tolerated. I.e. At default, if the z-score of a control well amplitude is 3.1 the well is failed. (Default: 3)
+- ```-a``` The maximum z-score of control melting curve amplitudes tolerated. I.e. At default, if the z-score of a control well amplitude is 2.1 the well is failed. (Default: 2)
 - ```-u``` The maximum relative amplitude of experimental wells allowed (relative to control average) (Default: 6)
-- ```-l``` The minimum relative amplitude of experimental wells allowed (relative to control average) (Default: 0.25)
+- ```-l``` The minimum relative amplitude of experimental wells allowed (relative to control average) (Default: 0.2)
 - ```-s``` The desired smoothing factor for smoothing of raw data (default = 0.0005)
 - ```-n``` Whether the input data should be normalized per plate. Input options are "y" or "n". (Default: y)
 
 **Note: You can use the ```-h``` flag to list these options in the command line.
 
-The processing of data can take some time depending on the number of plates included in the analysis. If you're using 4 CPUs, processing 100 plates (384-well) takes around 7 minutes. Please see the associated manuscript for additional details on performance. 
+Data processing can take some time depending on the number of plates in the analysis. If you're using 4 CPUs, processing 100 plates (384-well) takes around 7 minutes. Please see the associated manuscript for additional details on performance. 
 
 > [!IMPORTANT]
->Several warnings will potentially be raised during running. These are all handled within the script. Unless they actually crash the program, these have been handled and are **NOT** a concern. As soon as I figure out out to stop those being printed out (but still raised for the script to deal with the problem)I'll fix that
+>Several warnings will potentially be raised during running. These are all handled within the script. Unless they crash the program, these have been handled and are **NOT** a concern. As soon as I figure out out to stop those from being printed out (but still raised for the script to deal with the problem)I'll fix that
 
 Once complete, 4 files would have been generated in the specified output directory:
  - "Final_curves.txt" includes all coordinates for original and cleaned/sliced curves
- - "Final_results.txt" has results from all calculations, including final melting temperatures, amplitudes, failures, reasons for failures etc
+ - "Final_results.txt" has the results from all calculations, including final melting temperatures, amplitudes, failures, reasons for failures, etc
  - "Plate_report.txt" is a small table listing which plates passed or failed. For any plate in which 8 or more control wells failed, the entire plate is labelled a failure
- - "Potential_problems.txt" lists any wells that have failed consistently across 3 or more plates. This has no bearing on any of the results and is meant to serve in an informative capacity. i.e. if the same well is failing in several plates, there may be a pipetting issue.
+ "Potential_problems.txt" lists any wells that have consistently failed across 3 or more plates. This has no bearing on any of the results and is meant to serve in an informative capacity. For example, if the same well is failing in several plates, there may be a pipetting issue.
 
 #### Step 4: Visualization
 
@@ -96,7 +101,12 @@ e.g.
 
 ```python3 visualization.py -i example_output/ ```
 
-This will start up a local Dash server, with a message like so:
+> [!IMPORTANT]
+> If you have opted to use the ```--only_tm``` flag, you cannot use the default visualization tool. Instead, you must run:
+>
+> ```python3 visualization_only_tm.py -i example_output/ ```
+
+In either case, a local Dash server will be fired up, with a message like so:
 
 ```
 Dash is running on http://0.0.0.0:8050/
