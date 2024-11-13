@@ -1,22 +1,57 @@
 # ShiftScan
 Analysis and visualization of high-throughput DSF data
 
-#### Installation and usage video
-A very brief video of ShiftScan installation (conda already installed) and usage is available on YouTube: https://youtu.be/shN0vUHEGOk
+#### Step 0: Installing conda
 
-#### Step 0: Installation
+Installation of ShiftScan and all it's dependencies is most easily achieved via conda. To get conda set up on a Mac or Linux, do the following:
 
-Download/Clone all files from https://github.com/samche42/ShiftScan/tree/main/scripts with: 
+**1.** Copy and paste the following into the terminal and then hit enter:
+
+  ```wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh```
+
+This will download the installer to your home directory. Now let’s run the installer... 
+
+**2.**  Copy and paste the following into the terminal and then hit enter:
+
+ ```bash Miniconda3-latest-Linux-x86_64.sh```
+
+ **3.** Follow all of the prompts. Keep pressing enter until it asks you to accept. Then type yes and enter. Say yes to everything.
+
+ **4.** Finally, for the changes to take effect we need to "reset" the terminal. You can either close the terminal and then open it back up again or run 
+ ```source ~/.bashrc```
+<br/><br/>
+
+You should now have conda installed. Yay! Let’s make sure everything is running as it should:
+ 
+**Check 1:** Is the word "(base)" now present on the left-hand side of the terminal?
+
+**Check 2:** Type in the following and hit enter:
+```conda -h```
+
+You should see a menu of options pop up. If all that worked, you can move on to installing ShiftScan!
+<br/><br/>
+
+___
+
+### Step 1: Installing ShiftScan
+
+1. Download/Clone all files from https://github.com/samche42/ShiftScan/tree/main/scripts with: 
 
 ```git clone https://github.com/samche42/ShiftScan.git```
 
-Move into the scripts subfolder in the Shiftscan folder (```cd ShiftScan/scripts/ ```)
+2. Move into the scripts subfolder in the Shiftscan folder (```cd ShiftScan/scripts/ ```)
 
-Create DSF conda anv using ```conda env create --file=shiftscan.yml```
+3. Create ShiftScan conda environemnet using ```conda env create --file=shiftscan.yml```
 
-Activate the environment using ```conda activate shiftscan```
+4. Activate the environment using ```conda activate shiftscan```
+<br/><br/>
 
-#### Step 1: Raw data format
+#### Installation and usage video
+A very brief video of ShiftScan installation (conda already installed) and usage is available on YouTube: https://youtu.be/shN0vUHEGOk
+
+___
+
+### Step 2: Raw data format
 
 Currently, the pipeline is designed to take in files with the following raw data format:
 
@@ -33,7 +68,8 @@ Currently, the pipeline is designed to take in files with the following raw data
 > [!IMPORTANT]
 > Please ensure your data follows the same format for a seamless analysis.
 
-#### Step 2: Metadata format
+___
+### Step 3: Metadata format
 
 Metadata must be stored in the following format (Do NOT include control wells in the metadata):
 
@@ -49,7 +85,8 @@ Metadata must be stored in the following format (Do NOT include control wells in
  - Do not include control wells in the metadata.
  - If your compounds are pure (I.e. not fractions), leave the 'FRACTION' column as zeros all the way down. 
 
-#### Step 3: Running the analysis
+___
+### Step 4: Running the analysis
 
 The analysis pipeline can be run with :
 
@@ -89,9 +126,10 @@ Once complete, 4 files would have been generated in the specified output directo
  - "Final_curves.txt" includes all coordinates for original and cleaned/sliced curves
  - "Final_results.txt" has the results from all calculations, including final melting temperatures, amplitudes, failures, reasons for failures, etc
  - "Plate_report.txt" is a small table listing which plates passed or failed. For any plate in which 8 or more control wells failed, the entire plate is labelled a failure
- "Potential_problems.txt" lists any wells that have consistently failed across 3 or more plates. This has no bearing on any of the results and is meant to serve in an informative capacity. For example, if the same well is failing in several plates, there may be a pipetting issue.
+ - "Potential_problems.txt" lists any wells that have consistently failed across 3 or more plates. This has no bearing on any of the results and is meant to serve in an informative capacity. For example, if the same well is failing in several plates, there may be a pipetting issue.
 
-#### Step 4: Visualization
+___
+### Step 5: Visualization
 
 This step is optional. The visualization script should be run using the ```i``` parameter to point to the directory with the four files generated from the previous step. The script is run with:
 
@@ -120,4 +158,4 @@ WARNING: This is a development server. Do not use it in a production deployment.
 Press CTRL+C to quit
 ```
 
-Navigate to the link provided (e.g. http://127.0.0.1:8050 in this case) in your web browser
+Copy and paste the address (e.g. ```http://0.0.0.0:8050/```) into your web browser. 
