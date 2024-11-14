@@ -81,7 +81,7 @@ Metadata must be stored in the following format (Do NOT include control wells in
 ___
 ### Step 4a: Running the analysis (default RAM-intensive mode)
 
-The analysis pipeline can be run with :
+Navigate to where ShiftScan was installed (unless you've added it to your PATH). The analysis pipeline can be run with :
 
 **Mac users:** ```python3 multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```.
 
