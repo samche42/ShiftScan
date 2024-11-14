@@ -6,15 +6,21 @@ Analysis and visualization of high-throughput DSF data
 
 ### Step 1: Installing ShiftScan
 
-1. Download/Clone all files from the ShiftScan repo with: 
+1. Navigate to your Downloads folder, or wherever you would like to store the ShiftScan tool
 
-```git clone https://github.com/samche42/ShiftScan.git```
+2. Download/Clone all files from the ShiftScan repo with: ```git clone https://github.com/samche42/ShiftScan.git```
 
-2. Move into the scripts subfolder in the Shiftscan folder (```cd ShiftScan/scripts/ ```)
+**Note:** You can install git using ```conda install -y git```
 
-3. Create ShiftScan conda environemnet using ```conda env create --file=shiftscan.yml```
+3. Move into the scripts subfolder in the Shiftscan folder (```cd ShiftScan/scripts/ ```)
 
-4. Activate the environment using ```conda activate shiftscan```
+4. Create ShiftScan conda environemnet using ```conda env create --file=shiftscan.yml```
+
+5. Activate the environment using ```conda activate shiftscan```
+
+6. You can test that everything works by running ```python3 multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```. At first, it will seem like nothing is happening, but then after about 10 seconds, several messages detailing the pipeline steps will show up.
+
+7. Once the analysis is complete, you can test the visualization tool with ```python3 visualization.py -i example_output/```. Navigate to the address that the Dash is running on (e.g. http://0.0.0.0:8050/) and you can play around and get familiar with the visualizations.
 <br/><br/>
 
 #### Installation and usage video
