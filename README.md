@@ -18,9 +18,21 @@ Analysis and visualization of high-throughput DSF data
 
 5. Activate the environment using ```conda activate shiftscan```
 
-6. You can test that everything works by running ```python3 multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```. At first, it will seem like nothing is happening, but then after about 10 seconds, several messages detailing the pipeline steps will show up.
+6. You can test that everything works by running: 
 
-7. Once the analysis is complete, you can test the visualization tool with ```python3 visualization.py -i example_output/```. Navigate to the address that the Dash is running on (e.g. http://0.0.0.0:8050/) and you can play around and get familiar with the visualizations.
+**Mac users:** ```python3 multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```.
+
+**Windows users:** ```python multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```. 
+
+At first, it will seem like nothing is happening, but after about 10 seconds, several messages detailing the pipeline steps will show up.
+
+7. Once the analysis is complete, you can test the visualization tool with:
+ 
+**Mac users:** ```python3 visualization.py -i example_output/```.
+
+**Windows users:** ```python visualization.py -i example_output/```.
+
+Navigate to the address that the Dash is running on (e.g. http://127.0.0.1:8050/) and you can play around and get familiar with the visualizations.
 <br/><br/>
 
 #### Installation and usage video
@@ -67,7 +79,9 @@ ___
 
 The analysis pipeline can be run with :
 
-```python3 multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```
+**Mac users:** ```python3 multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```.
+
+**Windows users:** ```python multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```.
 
 where the parameters are:
 
@@ -78,7 +92,8 @@ where the parameters are:
 > [!NOTE]
 > If you only want the Tm values estimated and no further comparison or analysis, you can add the ```--only_tm``` flag, which will stop the pipeline early and generate a single output file with The estimated Tm value per sigmoidal region detected. This output will **not** work with the default companion tool (See later for details for visualization). Example code to use:
 > 
-> ```python3 multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/ --only_tm```
+> **Mac users:** ```python3 multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/ --only_tm```
+> **Windows users:** ```python multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/ --only_tm```
 
 Additionally, there are some additional parameters you can provide if you would like to tweak how the data is processed
 
@@ -123,12 +138,15 @@ This step is optional. The visualization script should be run using the ```i``` 
 
 e.g.
 
-```python3 visualization.py -i example_output/ ```
+**Mac users:** ```python3 visualization.py -i example_output/```.
+
+**Windows users:** ```python visualization.py -i example_output/```.
 
 > [!IMPORTANT]
 > If you have opted to use the ```--only_tm``` flag, you cannot use the default visualization tool. Instead, you must run:
 >
-> ```python3 visualization_only_tm.py -i example_output/ ```
+> **Mac users:** ```python3 visualization_only_tm.py -i example_output/ ```
+> **Windows users:** ```python visualization_only_tm.py -i example_output/ ```
 
 In either case, a local Dash server will be fired up, with a message like so:
 
@@ -144,4 +162,4 @@ WARNING: This is a development server. Do not use it in a production deployment.
 Press CTRL+C to quit
 ```
 
-Copy and paste the address (e.g. ```http://0.0.0.0:8050/```) into your web browser. 
+Copy and paste the address (e.g. ```http://127.0.0.1:8050/```) into your web browser. 
