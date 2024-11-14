@@ -2,7 +2,7 @@
 Analysis and visualization of high-throughput DSF data
 
 > [!IMPORTANT]
-> If you do not have Python or miniconda installed, please follow these instructions to get those set up prior to installing ShiftScan
+> If you do not have Python or miniconda installed, please [follow these instructions](Installing_Python_and_conda.md) to get those set up prior to installing ShiftScan
 
 ### Step 1: Installing ShiftScan
 
