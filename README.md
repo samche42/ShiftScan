@@ -1,41 +1,12 @@
 # ShiftScan
 Analysis and visualization of high-throughput DSF data
 
-#### Step 0: Installing conda
-
-Installation of ShiftScan and all it's dependencies is most easily achieved via conda. To get conda set up on a Mac or Linux, do the following:
-
-**1.** Copy and paste the following into the terminal and then hit enter:
-
-  ```wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh```
-
-This will download the installer to your home directory. Now let’s run the installer... 
-
-**2.**  Copy and paste the following into the terminal and then hit enter:
-
- ```bash Miniconda3-latest-Linux-x86_64.sh```
-
- **3.** Follow all of the prompts. Keep pressing enter until it asks you to accept. Then type yes and enter. Say yes to everything.
-
- **4.** Finally, for the changes to take effect we need to "reset" the terminal. You can either close the terminal and then open it back up again or run 
- ```source ~/.bashrc```
-<br/><br/>
-
-You should now have conda installed. Yay! Let’s make sure everything is running as it should:
- 
-**Check 1:** Is the word "(base)" now present on the left-hand side of the terminal?
-
-**Check 2:** Type in the following and hit enter:
-```conda -h```
-
-You should see a menu of options pop up. If all that worked, you can move on to installing ShiftScan!
-<br/><br/>
-
-___
+> [!IMPORTANT]
+> If you do not have Python or miniconda installed, please follow these instructions to get those set up prior to installing ShiftScan
 
 ### Step 1: Installing ShiftScan
 
-1. Download/Clone all files from https://github.com/samche42/ShiftScan/tree/main/scripts with: 
+1. Download/Clone all files from the ShiftScan repo with: 
 
 ```git clone https://github.com/samche42/ShiftScan.git```
 
