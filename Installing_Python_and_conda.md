@@ -31,6 +31,6 @@ ___
 
 6. If you would like conda to be active whenever you open a terminal window (I prefer it this way, but up to you!), you can run ```conda init --all```. Then close and re-open your terminal.
 
-7. Next, to install ```git```, you can should type in ```conda install -y git``` and then press enter. 
+7. Next, to install ```git```, type in ```conda install -y git``` and then press enter. 
 
 8. You are ready to [install ShiftScan](README.md)!
