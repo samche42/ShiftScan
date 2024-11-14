@@ -86,7 +86,7 @@ Metadata must be stored in the following format (Do NOT include control wells in
  - If your compounds are pure (I.e. not fractions), leave the 'FRACTION' column as zeros all the way down. 
 
 ___
-### Step 4: Running the analysis
+### Step 4a: Running the analysis (default RAM-intensive mode)
 
 The analysis pipeline can be run with :
 
@@ -127,6 +127,15 @@ Once complete, 4 files would have been generated in the specified output directo
  - "Final_results.txt" has the results from all calculations, including final melting temperatures, amplitudes, failures, reasons for failures, etc
  - "Plate_report.txt" is a small table listing which plates passed or failed. For any plate in which 8 or more control wells failed, the entire plate is labelled a failure
  - "Potential_problems.txt" lists any wells that have consistently failed across 3 or more plates. This has no bearing on any of the results and is meant to serve in an informative capacity. For example, if the same well is failing in several plates, there may be a pipetting issue.
+
+### Step 4b: Running the analysis (Disk-intensive mode)
+If you are limited by available RAM but still need to run hundreds of plates, you may opt to use the disk-intensive mode of ShiftScan. 
+
+The analysis pipeline is largely identical to the RAM-intensive mode in terms of usage, all you have to do is change the name of the script:
+
+```python3 multiprocessor_main_platewise.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```
+
+All available parameters and the option to use the ```--only_tm flag``` are the same as in the RAM-intensive mode. Note that the disk-intensive mode will be slower than the RAM-intensive mode. 
 
 ___
 ### Step 5: Visualization
