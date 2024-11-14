@@ -97,6 +97,7 @@ where the parameters are:
 > If you only want the Tm values estimated and no further comparison or analysis, you can add the ```--only_tm``` flag, which will stop the pipeline early and generate a single output file with The estimated Tm value per sigmoidal region detected. This output will **not** work with the default companion tool (See later for details for visualization). Example code to use:
 > 
 > **Mac users:** ```python3 multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/ --only_tm```
+> 
 > **Windows users:** ```python multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/ --only_tm```
 
 Additionally, there are some additional parameters you can provide if you would like to tweak how the data is processed
