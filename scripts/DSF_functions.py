@@ -8,6 +8,126 @@ from scipy.signal import find_peaks
 import numpy as np
 import pandas as pd
 
+def roche_import(file_list,delim):
+    if file_list: # Check if there are any files in the specified input folder
+        dfs = []  # Initialize list of all files (converted to DataFrames)
+        for file in file_list:
+            try:
+                data = pd.read_csv(file, sep=delim, header=0)
+                data['Origin of data'] = file.stem  # Get filename without extension
+                dfs.append(data)
+            except Exception as e:
+                print(f"There was a problem concatenating file: {file}. Please confirm the file is tab-delimited and has correct headers. Error: {e}")
+                sys.exit()
+    else:
+        print("No .txt or .csv files found in specified input folder.")
+        sys.exit()
+    try:
+        raw_input_df = pd.concat(dfs, ignore_index=True)#Smush them all together
+        raw_input_df.columns = raw_input_df.columns.str.replace("X.", "X (", regex = True)
+        raw_input_df.columns = [x+')' if 'X (' in x else x for x in raw_input_df.columns]
+        parsed_df = raw_input_df.T.drop_duplicates().T #Remove duplicated temp columns
+        parsed_df  = parsed_df.rename(columns={'X': 'Temp', 'Origin of data':'Origin'}) #Rename temp column
+        melted_df = pd.melt(parsed_df,id_vars=['Temp','Origin']) #Melt dataframe
+        melted_df['Well'] = melted_df.variable.str.split(':', expand=True)[0] #create well column
+        melted_df  = melted_df.rename(columns={'value': 'Fluorescence'}) #Rename columns
+        melted_df['Assay_Plate'] = melted_df.Origin.str.split('.', expand=True)[0] #Create plate column from origin data
+        melted_df['Row'] = melted_df['Well'].str[0] #Take first character from Well string and make it Row value 
+        melted_df['Column'] = melted_df['Well'].str[1:]
+        melted_df = melted_df.astype({'Column':'int'})
+        semifinal_df = melted_df.drop(['Origin','variable'],axis = 1) #Get rid of useless/redundant columns
+        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate']+'_'+semifinal_df['Well'] #Add in new column with generated unique key
+    except Exception as e: 
+        print("There was an issue parsing concatenated data. Please confirm input data format is correct. Error: ", e) 
+        sys.exit()
+    return semifinal_df
+
+def roche_import_platewise(file,delim):
+    try:
+        data = pd.read_csv(file, sep=delim, header=0)
+        data['Origin of data'] = file.stem  # Get filename without extension
+    except Exception as e:
+        print(f"There was a problem concatenating file: {file}. Please confirm the file is tab-delimited and has correct headers. Error: {e}")
+        sys.exit()
+    try:
+        raw_input_df = data
+        raw_input_df.columns = raw_input_df.columns.str.replace("X.", "X (", regex = True)
+        raw_input_df.columns = [x+')' if 'X (' in x else x for x in raw_input_df.columns]
+        parsed_df = raw_input_df.T.drop_duplicates().T #Remove duplicated temp columns
+        parsed_df  = parsed_df.rename(columns={'X': 'Temp', 'Origin of data':'Origin'}) #Rename temp column
+        melted_df = pd.melt(parsed_df,id_vars=['Temp','Origin']) #Melt dataframe
+        melted_df['Well'] = melted_df.variable.str.split(':', expand=True)[0] #create well column
+        melted_df  = melted_df.rename(columns={'value': 'Fluorescence'}) #Rename columns
+        melted_df['Assay_Plate'] = melted_df.Origin.str.split('.', expand=True)[0] #Create plate column from origin data
+        melted_df['Row'] = melted_df['Well'].str[0] #Take first character from Well string and make it Row value 
+        melted_df['Column'] = melted_df['Well'].str[1:]
+        melted_df = melted_df.astype({'Column':'int'})
+        semifinal_df = melted_df.drop(['Origin','variable'],axis = 1) #Get rid of useless/redundant columns
+        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate']+'_'+semifinal_df['Well'] #Add in new column with generated unique key
+    except Exception as e: 
+        print("There was an issue parsing concatenated data. Please confirm input data format is correct. Error: ", e) 
+        sys.exit()
+    return semifinal_df
+
+def biorad_import(file_list,delim):
+    if file_list: # Check if there are any files in the specified input folder
+        dfs = []  # Initialize list of all files (converted to DataFrames)
+        for file in file_list:
+            try:
+                data = pd.read_csv(file, sep=delim,skiprows=4, header=0) #Skip the first 4 rows
+                data = data.drop(['Step','Cycle','Dye'],axis = 1) #Drop the first 3 columns (Step, Cycle, Dye)
+                data['Origin of data'] = file.stem # Get filename without extension and add as new column
+                data = data.dropna(subset=['Temp.'])
+                dfs.append(data)
+            except Exception as e:
+                print(f"There was a problem concatenating file: {file}. Please confirm the file is tab-delimited and has correct headers. Error: {e}")
+                sys.exit()
+    else:
+        print("No .txt or .csv files found in specified input folder.")
+        sys.exit()
+    try:
+        raw_input_df = pd.concat(dfs, ignore_index=True)#Smush them all together
+        raw_input_df  = raw_input_df.rename(columns={'Temp.': 'Temp', 'Origin of data':'Origin'}) #Rename temp column
+        melted_df = pd.melt(raw_input_df,id_vars=['Temp','Origin']) #Melt dataframe
+        melted_df = melted_df.rename(columns={'variable': 'Well','value': 'Fluorescence'})
+        melted_df['Assay_Plate'] = melted_df.Origin.str.split('.', expand=True)[0] #Create plate column from origin data
+        melted_df['Row'] = melted_df['Well'].str[0] #Take first character from Well string and make it Row value 
+        melted_df['Column'] = melted_df['Well'].str[1:]
+        melted_df = melted_df.astype({'Column':'int'})
+        semifinal_df = melted_df.drop(['Origin'],axis = 1) #Get rid of useless/redundant columns
+        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate']+'_'+semifinal_df['Well'] #Add in new column with generated unique key
+    except Exception as e: 
+        print("There was an issue parsing concatenated data. Please confirm input data format is correct. Error: ", e) 
+        sys.exit()
+    return semifinal_df
+
+def biorad_import_platewise(file,delim):
+    try:
+        data = pd.read_csv(file, sep=delim,skiprows=4, header=0) #Skip the first 4 rows
+        data = data.drop(['Step','Cycle','Dye'],axis = 1) #Drop the first 3 columns (Step, Cycle, Dye)
+        data['Origin of data'] = file.stem # Get filename without extension and add as new column
+        data = data.dropna(subset=['Temp.'])
+        dfs.append(data)
+    except Exception as e:
+        print(f"There was a problem concatenating file: {file}. Please confirm the file is tab-delimited and has correct headers. Error: {e}")
+        sys.exit()
+    try:
+        raw_input_df = pd.concat(dfs, ignore_index=True)#Smush them all together
+        raw_input_df  = raw_input_df.rename(columns={'Temp.': 'Temp', 'Origin of data':'Origin'}) #Rename temp column
+        melted_df = pd.melt(raw_input_df,id_vars=['Temp','Origin']) #Melt dataframe
+        melted_df = melted_df.rename(columns={'variable': 'Well','value': 'Fluorescence'})
+        melted_df['Assay_Plate'] = melted_df.Origin.str.split('.', expand=True)[0] #Create plate column from origin data
+        melted_df['Row'] = melted_df['Well'].str[0] #Take first character from Well string and make it Row value 
+        melted_df['Column'] = melted_df['Well'].str[1:]
+        melted_df = melted_df.astype({'Column':'int'})
+        semifinal_df = melted_df.drop(['Origin'],axis = 1) #Get rid of useless/redundant columns
+        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate']+'_'+semifinal_df['Well'] #Add in new column with generated unique key
+    except Exception as e: 
+        print("There was an issue parsing concatenated data. Please confirm input data format is correct. Error: ", e) 
+        sys.exit()
+    return semifinal_df
+
+
 def find_inflection(x,y):
     deriv1 = np.gradient(y,x) #Find first deriv
     deriv2 = list(np.gradient(deriv1,x)) #Find second deriv
@@ -16,20 +136,29 @@ def find_inflection(x,y):
             x_zero = x[i] - deriv2[i] * (x[i+1] - x[i]) / (deriv2[i+1] - deriv2[i]) #Find x-coord when sign flips = inflection
             return x_zero
 
-def concatenate_files(files, output_dir_string, output_filename):
-    dfs = list() 
-    for file in files:
-        data = pd.read_csv(output_dir_string+"/"+file, sep='\t',header=0)
-        dfs.append(data)
-    dataframe = pd.concat(dfs, ignore_index=True)
-    dataframe.to_csv(output_dir_string+"/"+output_filename,sep="\t",index=False)
+def concatenate_files(files, output_dir_string, output_filename): 
+	dfs = [] 
+	for file in files: 
+		try: 
+			file_path = os.path.join(output_dir_string, file) 
+			data = pd.read_csv(file_path, sep='\t', header=0) 
+			dfs.append(data) 
+		except Exception as e: 
+			print(f"There was a problem reading the file: {file}. Error: {e}") 
+			continue 
+	try: 
+		dataframe = pd.concat(dfs, ignore_index=True) 
+		output_path = os.path.join(output_dir_string, output_filename) 
+		dataframe.to_csv(output_path, sep="\t", index=False) 
+	except Exception as e: 
+		print(f"There was a problem writing the output file: {output_filename}. Error: {e}")
 
 def slice_list(positions,input_list):
 	returned_list = []
 	for i in range(len(positions)-1):
 		start = positions[i]
 		end = positions[i + 1]
-		returned_list.append(input_list[start:end]) #Gneerate new list of coord lists for each slice position pair
+		returned_list.append(input_list[start:end]) #Generate new list of coord lists for each slice position pair
 	return returned_list
 
 def clean_curve(x,spl):
@@ -49,7 +178,6 @@ def clean_curve(x,spl):
 		average_slope = np.nanmean(np.gradient(y_slices[i], x_slices[i])) #Ignore Nan values when calculating mean gradient
 		#Next, let's calculate the gradient of the second derivative slop for each coord set. 
 		#We would expect a mix of positive and negative values if the curve is actually sigmoidal (i.e first deriv curve actually has a peak of sorts)
-		#See Jupyter Notebook "Generating_first_deriv_curves.ipynb" for details
 		first_deriv = list(np.gradient(y_slices[i], x_slices[i]))
 		second_deriv = list(np.gradient(first_deriv, x_slices[i]))
 		neg_count = len(list(filter(lambda x: (x < 0), second_deriv)))

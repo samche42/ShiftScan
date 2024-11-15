@@ -3,11 +3,18 @@
 import argparse, sys, os, gc
 from pathlib import Path
 import pandas as pd
+import numpy as np
+import multiprocessing
+from multiprocessing import cpu_count
+from functools import partial
+from DSF_functions import slice_list, clean_curve, split_curves,add_curve_data, boltzmann_sigmoid, initial_params, Model_data, process_well
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input_dir", help="Full file path to directory with input files")
 parser.add_argument("-m", "--metadata", help="Full file path to metadata file")
 parser.add_argument("-p", "--processors", help="No. of processors you want to use", default = 4)
+parser.add_argument("-f", "--file_origin", help="Instrument used to generate raw output. Options currently include 'RocheLightCycler','BioRadOpticonMonitor'", default = 'RocheLightCycler')
+parser.add_argument("-d", "--delimiter", help="Separator character in raw data input file", default = "\t")
 parser.add_argument("-c", "--control_cols", help="The column numbers of your controls", default = "1,2")
 parser.add_argument("-o", "--output_dir", help="Full path to desired output directory", default = "./")
 parser.add_argument("-x", "--failed_control_wells", help="The number of controls allowed to fail before a plate is failed", default = 8)
@@ -21,26 +28,8 @@ parser.add_argument("--only_tm", action='store_true', help = "Flag to enable onl
 
 args = parser.parse_args()
 
-files = Path(args.input_dir).glob('*.txt')  #generate list of all txt files
-#Confirm there are at least some files in specified input folder
-if any(Path(args.input_dir).glob('*.txt')):
-    dfs = list() #Empty list of all files (converted to dfs)
-    for file in files:
-        try:
-            data = pd.read_csv(file, sep='\t',header=0)
-            data['Origin of data'] = file.stem #Stem: Get filename without extension
-            dfs.append(data)
-        except:
-            print("There was a problem concatenating file: "+str(file)+". Please confirm the file is tab delimited and has correct headers")
-            sys.exit()
-         
-else:
-    print("No text files found in specified input folder")
-    sys.exit() 
-
-raw_input_df = pd.concat(dfs, ignore_index=True)
-raw_input_df.columns = raw_input_df.columns.str.replace("X.", "X (", regex = True)
-raw_input_df.columns = [x+')' if 'X (' in x else x for x in raw_input_df.columns]
+# Generate list of .txt and .csv files in the input directory
+files = [file for file in Path(args.input_dir).glob('*') if file.suffix in ['.txt', '.csv']]
 
 #Prep output directory string
 output_dir_string = args.output_dir
@@ -60,32 +49,23 @@ if len(control_list) == 0:
     print("ERROR: No control columns specified")
     sys.exit() 
 
+#Lets get the input data correctly formatted!
+if args.file_origin == 'RocheLightCycler':
+    try:
+        from DSF_functions import roche_import
+        semifinal_df = roche_import(files, args.delimiter)
+    except: 
+        print("A problem was encountered while parsing input data. Please confirm that format is correct")
+        sys.exit()
+elif args.file_origin == 'BioRadOpticonMonitor':
+    try:
+        from DSF_functions import biorad_import
+        semifinal_df = biorad_import(files, args.delimiter)
+    except: 
+        print("A problem was encountered while parsing input data. Please confirm that format is correct")
+        sys.exit()
 
 if __name__ == '__main__':
-
-    ################################
-    #
-    # PART 1: Reading in and parsing the the experimental data 
-    #
-    ################################
-    print("Concatenating data...smush, smush, smush...")
-
-    import numpy as np
-    try:
-        parsed_df = raw_input_df.T.drop_duplicates().T #Remove duplicated temp columns
-        parsed_df  = parsed_df.rename(columns={'X': 'Temp', 'Origin of data':'Origin'}) #Rename temp column
-        melted_df = pd.melt(parsed_df,id_vars=['Temp','Origin']) #Melt dataframe
-        melted_df['Well'] = melted_df.variable.str.split(':', expand=True)[0] #create well column
-        melted_df['Assay_Plate'] = melted_df.Origin.str.split('.', expand=True)[0] #Create plate column from origin data
-        melted_df['Row'] = melted_df['Well'].str[0] #Take first character from Well string and make it Row value 
-        melted_df['Column'] = melted_df['Well'].str[1:]
-        melted_df = melted_df.astype({'Column':'int'})
-        melted_df  = melted_df.rename(columns={'value': 'Fluorescence'}) #Rename columns
-        semifinal_df = melted_df.drop(['Origin','variable'],axis = 1) #Get rid of useless/redundant columns
-        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate']+'_'+semifinal_df['Well'] #Add in new column with generated unique key
-        print("Concatenated data successfully loaded. Moving on...")
-    except:
-        print("There was an issue parsing concatenated data. Please confirm input data format is correct")
 
     ################################
     #
@@ -127,7 +107,7 @@ if __name__ == '__main__':
     print("Control columns assigned")
 
     #Let's delete a few dataframes taking up memory
-    del parsed_df, melted_df, semifinal_df,semifinal_df2,tmp, map_raw_df,raw_input_df
+    del semifinal_df,semifinal_df2,tmp, map_raw_df
 
     # Function to normalize values between 0 and 1
     def normalize(series):
@@ -152,10 +132,6 @@ if __name__ == '__main__':
     # PART 4: Processing wells
     #
     ################################
-    import multiprocessing
-    from multiprocessing import cpu_count
-    from functools import partial
-    from DSF_functions import slice_list, clean_curve, split_curves,add_curve_data, boltzmann_sigmoid, initial_params, Model_data, process_well
 
     #Create empty dataframe for melting temp summary output
     Tm_df = pd.DataFrame(columns = ['Assay_Plate','Source_Plate','Well','Unique_key','Subplot','Well_type','Compound','Fraction','Smooth_Tm','Boltzmann_Tm','Boltzmann_RSS','Amplitude','Curve_height','Error','Warning'])
