@@ -93,7 +93,9 @@ where the parameters are:
 Additionally, there are some additional parameters you can provide if you would like to tweak how the data is processed
 
 - ```-c``` A comma-delimited list of which columns contain your controls (Default:  "1,2")
-- ```-f``` Instrument used to generate raw output. Options currently include 'RocheLightCycler' and 'BioRadOpticonMonitor'" (default = 'RocheLightCycler')
+- ```-f``` Instrument used to generate raw output (default = 'RocheLightCycler'). Example data can be found in the input_example_data folder in this repo. Options currently include:
+  - ```RocheLightCycler```
+  - ```BioRadOpticonMonitor```
 - ```-d``` Separator character in raw data input file (default = "\t" i.e. tab-delimited)
 - ```-p``` The number of processors you wish to use (Default: 4)
 - ```-x``` The maximum number of control wells allowed to fail per plate. E.g. At default, if 9 control wells fail, the plate is failed. (Default: 8)
