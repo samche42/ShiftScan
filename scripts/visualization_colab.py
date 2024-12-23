@@ -887,4 +887,4 @@ def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update
 
 # Run the app
 if __name__ == '__main__':
-    app.run_server(mode='inline')
+    app.run_server(mode='inline',host="0.0.0.0",port=1005)
