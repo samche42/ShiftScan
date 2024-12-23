@@ -888,4 +888,4 @@ def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update
 
 # Run the app
 if __name__ == '__main__':
-    app.run_server(jupyter_mode="external")
+    app.run_server(jupyter_mode="inline")
