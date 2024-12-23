@@ -9,6 +9,7 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 from dash.exceptions import PreventUpdate
 import numpy as np
+from pyngrok import ngrok
 
 # Initialize the app
 app = JupyterDash(__name__)
@@ -20,6 +21,9 @@ parser.add_argument("-i", "--input_dir", help="Full file path to output files fr
 parser.add_argument("-z", "--port", help="Optional: Port to route to", default = 8050)
 
 args = parser.parse_args()
+
+public_url = ngrok.connect(args.port)
+print(f'Public URL: {public_url}')
 
 ####################
 #
