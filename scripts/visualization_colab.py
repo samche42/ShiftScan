@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 import dash, math, argparse
-from dash import JupyterDash, html, dcc, Input, Output, State, dash_table, callback_context
+from jupyter_dash import JupyterDash
+from dash import html, dcc, Input, Output, State, dash_table, callback_context
 import pandas as pd
 import plotly.express as px
 import dash_bootstrap_components as dbc
