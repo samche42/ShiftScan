@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import dash, math, argparse
-from dash import Dash, html, dcc, Input, Output, State, dash_table, callback_context
+from dash import JupyterDash, html, dcc, Input, Output, State, dash_table, callback_context
 import pandas as pd
 import plotly.express as px
 import dash_bootstrap_components as dbc
@@ -10,7 +10,7 @@ from dash.exceptions import PreventUpdate
 import numpy as np
 
 # Initialize the app
-app = Dash(__name__)
+app = JupyterDash(__name__)
 app.config.suppress_callback_exceptions = True
 
 parser = argparse.ArgumentParser()
