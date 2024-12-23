@@ -1,0 +1,8 @@
+python==3.9.19
+pandas==1.4.2
+numpy==1.26.4
+dash==2.17.1
+plotly_express==0.4.1
+scipy==1.12.0
+dash-bootstrap-components==1.5.0
+psutil==6.0.0
