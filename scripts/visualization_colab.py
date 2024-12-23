@@ -13,6 +13,7 @@ import numpy as np
 # Initialize the app
 app = JupyterDash(__name__)
 app.config.suppress_callback_exceptions = True
+server = app.server
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input_dir", help="Full file path to output files from previous step")
