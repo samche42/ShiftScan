@@ -12,9 +12,13 @@ For advanced users who want the full capabilities and performance, using the CLI
 
 If you prefer a more straightforward setup with a graphical interface, Google Colab is a great option. While it may not offer the same speed and advanced features as the CLI, it is ideal for those who are new to this type of software or prefer a simpler, more guided experience.
 
+___
+
 ### A. ShiftScan Colab option
 
 The most user-friendly option for using ShiftScan is via Google Colab. The link to the Colab notebook [is here](https://colab.research.google.com/drive/1ShHOWqqwMoYdsmMajNAvnpBKyKsDl5AG?usp=sharing). Please follow [this video](https://youtu.be/0s_StsQqHoA) for instructions on how to make a copy and use it to analyze your own data.
+
+___
 
 ### B. Command-line option
 
