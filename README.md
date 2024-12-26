@@ -26,45 +26,9 @@ If you're comfortable using command line, this is the choice for you. You can op
 
 #### Step 1: Installing ShiftScan
 
-> [!IMPORTANT]
-> If you do not have Python or miniconda installed, please [follow these instructions](Installing_Python_and_conda.md) to check if you have them, and if not, get those set up prior to installing ShiftScan
+If you are a Windows user, please follow these instructions to install ShiftScan.
 
-1. Ensure that you have miniconda installed and ready to go
-
-2. Navigate to your Downloads folder, or wherever you would like to store the ShiftScan tool
-
-3. Download/Clone all files from the ShiftScan repo with: 
-
-```git clone https://github.com/samche42/ShiftScan.git```
-
-> [!NOTE]
-> You can install git using ```conda install -y git```
-
-4. Move into the scripts subfolder in the Shiftscan folder (```cd ShiftScan/scripts/ ```)
-
-5. Create ShiftScan conda environment using ```conda env create --file=shiftscan.yml```
-
-6. Activate the environment using ```conda activate shiftscan```
-
-7. You can test that everything works by running: 
-
-**Mac users:** ```python3 multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```.
-
-**Windows users:** ```python multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```. 
-
-At first, it will seem like nothing is happening, but after about 10 seconds, several messages detailing the pipeline steps will show up.
-
-8. Once the analysis is complete, you can test the visualization tool with:
- 
-**Mac users:** ```python3 visualization.py -i example_output/```.
-
-**Windows users:** ```python visualization.py -i example_output/```.
-
-9. Navigate to the address that the Dash is running on (e.g. http://127.0.0.1:8050/) and you can play around and get familiar with the visualizations.
-<br/><br/>
-
-##### Installation and usage video
-A very brief video of ShiftScan installation (conda already installed) and usage is available on YouTube: https://youtu.be/shN0vUHEGOk
+If you are a Mac or Linux user, please follow these instructions to install ShiftScan.
 
 ___
 
