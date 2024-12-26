@@ -1,7 +1,9 @@
 # Installing Python and/or miniconda on Windows
 
 1. Navigate to your terminal (Start menu -> Programs -> Windows Powershell) OR just type "Powershell" into the search bar
-2. Type in ```python --version``` and hit enter. If the message ```Python was not found; run without arguments ...``` pops up, you'll need to install Python. If something like ```Python 3.13.0``` pops up, you can skip ahead to installing miniconda.
+2. Open Powershell by clicking on the program 
+3. In the newly opened Powershell terminal, type in ```python --version``` (some systems use ```py --version```) and hit enter.
+4. If the message ```Python was not found; run without arguments ...``` pops up, you'll need to install Python. If something like ```Python 3.13.0``` pops up, you can skip ahead to installing miniconda.
 
 ___
 ## Installing Python
@@ -10,9 +12,19 @@ ___
 
 2. Click on the yellow download button to start the download.
 
-3. Once the installer is downloaded (probably in your Downloads folder), double-click on the file to start the installer. Check the box that says to add Python to your PATH and then continue through the prompts, agree to the terms and then hit the Install button. You can move the installer to the trash once the installation is complete.
+3. Once the installer is downloaded (probably in your Downloads folder), double-click on the file to start the installer.
 
-4. Open a new PowerShell window and type in ```py --version``` to confirm that Python has been installed successfully
+   a. Check the box that says to add Python to your PATH
+
+   b. Continue through the prompts
+
+   c. Agree to the terms
+
+   d. Click the Install button.
+   
+   e. You can move the installer to the trash once the installation is complete.
+
+5. Open a new PowerShell window and type in ```python --version``` (some systems use ```py --version```) to confirm that Python has been installed successfully
 
 On to the next step: Installing miniconda!
 
