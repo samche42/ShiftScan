@@ -41,8 +41,14 @@ ___
 
 3. Next, remove the installer with: ```del miniconda.exe```
 
-4. After installing, you'll want to open the “Anaconda Powershell Prompt” instead of the regular PowerShell terminal
+4. Close the PowerShell terminal
 
-5. Finally, to install ```git```, type in ```conda install -y git``` and then press enter.
- 
-6. You are ready to [install ShiftScan](README.md)!
+5. Next, open the “Anaconda Powershell Prompt” instead of the regular PowerShell terminal
+
+6. Finally, to install ```git```, type in ```conda install -y git``` and then press enter.
+
+___
+
+## Installing ShiftScan
+
+1. In the Anaconda Powershell Prompt terminal window navigate to your Downloads folder (or wherever you would like to store the ShiftScan tool). You can do this by typing in: ```cd 
