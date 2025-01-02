@@ -373,11 +373,3 @@ else:
         os.remove(filename)
     for filename in glob.glob(output_dir_string+"/Potential_problems_plate_*"):
         os.remove(filename)
-
-end_time = time.time()
-tot_time = end_time -start_time
-print("Total time for "+str(plate_count)+" plates: "+str(tot_time)+" seconds")
-current, peak = tracemalloc.get_traced_memory()
-final_memory = process.memory_info().rss
-print(f"Total memory usage: {final_memory / 10**3}KB")
-tracemalloc.stop()
