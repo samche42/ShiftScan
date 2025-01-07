@@ -28,6 +28,7 @@ def roche_import(file_list,delim):
         raw_input_df.columns = [x+')' if 'X (' in x else x for x in raw_input_df.columns]
         parsed_df = raw_input_df.T.drop_duplicates().T #Remove duplicated temp columns
         parsed_df  = parsed_df.rename(columns={'X': 'Temp', 'Origin of data':'Origin'}) #Rename temp column
+        parsed_df = parsed_df.drop(columns=[col for col in parsed_df.columns if 'X (' in col])
         melted_df = pd.melt(parsed_df,id_vars=['Temp','Origin']) #Melt dataframe
         melted_df['Well'] = melted_df.variable.str.split(':', expand=True)[0] #create well column
         melted_df  = melted_df.rename(columns={'value': 'Fluorescence'}) #Rename columns
@@ -55,6 +56,7 @@ def roche_import_platewise(file,delim):
         raw_input_df.columns = [x+')' if 'X (' in x else x for x in raw_input_df.columns]
         parsed_df = raw_input_df.T.drop_duplicates().T #Remove duplicated temp columns
         parsed_df  = parsed_df.rename(columns={'X': 'Temp', 'Origin of data':'Origin'}) #Rename temp column
+        parsed_df = parsed_df.drop(columns=[col for col in parsed_df.columns if 'X (' in col])
         melted_df = pd.melt(parsed_df,id_vars=['Temp','Origin']) #Melt dataframe
         melted_df['Well'] = melted_df.variable.str.split(':', expand=True)[0] #create well column
         melted_df  = melted_df.rename(columns={'value': 'Fluorescence'}) #Rename columns
