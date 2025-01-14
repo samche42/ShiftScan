@@ -26,9 +26,9 @@ If you're comfortable using command line, this is the choice for you. You can op
 
 #### Installing ShiftScan
 
-If you are a Windows user, please follow these instructions to install ShiftScan.
+**Windows user:** Please watch this fully detailed video on installation and usage, or follow these instructions to install ShiftScan.
 
-If you are a Mac or Linux user, please watch this [fully detailed video](https://youtu.be/h63QPug3il8) on installation and usage, or follow these instructions to install ShiftScan.
+**Mac or Linux user:** Please watch this [fully detailed video](https://youtu.be/h63QPug3il8) on installation and usage, or follow [these instructions](https://github.com/samche42/ShiftScan/blob/main/Other_docs/Mac_Installing_Python_and_conda.md) to install ShiftScan.
 
 ___
 
