@@ -28,7 +28,7 @@ If you're comfortable using command line, this is the choice for you. You can op
 
 If you are a Windows user, please follow these instructions to install ShiftScan.
 
-If you are a Mac or Linux user, please follow these instructions to install ShiftScan.
+If you are a Mac or Linux user, please watch this [fully detailed video](https://youtu.be/h63QPug3il8) on installation and usage, or follow these instructions to install ShiftScan.
 
 ___
 
