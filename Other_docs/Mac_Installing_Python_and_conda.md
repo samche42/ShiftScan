@@ -11,9 +11,9 @@ ___
 
 2. Click on the yellow download button to start the download.
 
-3. Once the installer is downloaded (probably in your Downloads folder), double click on the file to start the installer. Continue through the prompts, agree to the terms and then hit the Install button. You can move the installer to the trash once the installation is complete
+3. Once the installer is downloaded (probably in your Downloads folder), double-click on the file to start the installer. Continue through the prompts, agree to the terms, and then hit the Install button. You can move the installer to the trash once the installation is complete
 
-4. Double click on the Install Certificates.command icon to complete the installation (this should open a terminal windows with a bunch of installation/set-up text). You can close the window once it says that the process has finished successfully.
+4. Double click on the Install Certificates.command icon to complete the installation (this should open a terminal window with a bunch of installation/set-up text). You can close the window once it says the process has finished successfully.
 
 On to the next step: Installing miniconda!
 
@@ -22,13 +22,13 @@ ___
 ## Installing miniconda
 1. Open a new terminal window
 
-2. Next, we're going to go to the [Miniconda website](https://docs.anaconda.com/miniconda/install/) to find the correct version of miniconda for your computer. Click on the drop down for MacOS and pick the tab that is right for you (I.e. M1/2 chip, or Intel).
+2. Next, we're going to go to the [Miniconda website](https://docs.anaconda.com/miniconda/install/) to find the correct version of miniconda for your computer. Click on the drop-down for MacOS and pick the tab that is right for you (I.e. M1/2 chip, or Intel).
 
 3. Copy the correct terminal command into the terminal and hit enter. This will download the installer.
 
 4. Next, type in the following and then hit enter: ```bash miniconda3/miniconda.sh``` This will run the installer - wait for it to complete before continuing with the next step.
   
-5. To fire up conda, type in the following and then hit enter: ```source ~/miniconda3/bin/activate```. You will see the word "(base)" appear on the lefthand side of your active line.
+5. To fire up conda, type in the following and then hit enter: ```source ~/miniconda3/bin/activate```. You will see the word "(base)" appear on the left hand side of your active line.
 
 8. Next, to install ```git```, type in ```conda install -y git``` and then press enter. 
 
@@ -61,18 +61,18 @@ At first, it will seem like nothing is happening, but after about 10 seconds, se
 
 7. Once the analysis is complete, you can test the visualization tool with:
  
-**Mac users:** ```python3 visualization.py -i example_output/```.
+```python3 visualization.py -i example_output/```.
 
 8. Navigate to the address that the Dash is running on (e.g. http://127.0.0.1:8050/) and you can play around and get familiar with the visualizations.
 
-9. When you're done, close the window and then shutdown the Dash server with Ctrl+C
+9. When you're done, close the window and then shut down the Dash server with Ctrl+C
 <br/><br/>
 
 ___
 
 ## Using ShiftScan
 
-1. Each time you need to run ShiftScan, you'll need to make sure that the ShiftScan conda environment is activated. To do this, you can run
+1. Each time you run ShiftScan, you'll need to ensure that the ShiftScan conda environment is activated. To do this, you can run
 ```conda activate shiftscan```
 
 2. Navigate to the scripts folder in the ShiftScan folder, e.g.:
