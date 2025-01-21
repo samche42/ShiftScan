@@ -28,10 +28,10 @@ ___
 
 The ShiftScan app is designed to make the software as accessible as possible, with a fully graphical, point-and-click interface. This is the most intuitive option for users who prefer to avoid command-line tools entirely. However, please note:
 
- - System Compatibility: The app is available only for MacOS at this time.
- - Performance Considerations: Processing and visualizing data in the app is much slower compared to other options due to the additional overhead of the GUI implementation. While it functions perfectly, users requiring high-speed processing are strongly encouraged to use the CLI.
+ - **System Compatibility**: The app is available **only for MacOS** at this time.
+ - **Performance Considerations**: Processing and visualizing data in the app is **much slower** compared to other options due to the additional overhead of the GUI implementation. While it functions perfectly, users requiring high-speed processing are strongly encouraged to use the CLI.
 
-For detailed guidance on downloading, setting up, and using the app (as well as understanding its limitations), please watch this instructional video:
+For detailed guidance on downloading, setting up, and using the app (as well as understanding its limitations), please watch [this instructional video](placeholder). The ShiftScan app can be downloaded from a dedicated [Google Drive folder here](https://drive.google.com/file/d/1sqpOKfBFlwPTuRPTeylmCfy-eZiozydv/view?usp=sharing). 
 ___
 
 ### Raw data format
