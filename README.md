@@ -2,34 +2,36 @@
 Analysis and visualization of high-throughput DSF data
 
 ## Usage Instructions
-This software can be used via the command-line interface (CLI) for the most powerful and versatile experience. However, if you are less familiar with command-line operations, you can also use the Google Colab option, which offers a user-friendly GUI interface (i.e. point-and-click interface).
-
-**Command-Line Interface (Recommended)**
-
-For advanced users who want the full capabilities and performance, using the CLI is the best choice. It provides the fastest and most comprehensive access to all features.
-
-**Google Colab (Alternative)**
-
-If you prefer a more straightforward setup with a graphical interface, Google Colab is a great option. While it may not offer the same speed and advanced features as the CLI, it is ideal for those who are new to this type of software or prefer a simpler, more guided experience.
+ShiftScan is designed for high-performance analysis of DSF data. It offers multiple ways to interact with the software (command line, Google Colab, or an app) depending on your familiarity with command-line tools and your performance expectations.
 
 ___
 
-### A. ShiftScan Colab option
+### A. Command-line option
 
-The most user-friendly option for using ShiftScan is via Google Colab. The link to the Colab notebook [is here](https://colab.research.google.com/drive/1ShHOWqqwMoYdsmMajNAvnpBKyKsDl5AG?usp=sharing). Please follow [this video](https://youtu.be/0s_StsQqHoA) for instructions on how to make a copy and use it to analyze your own data.
-
-___
-
-### B. Command-line option
-
-If you're comfortable using command line, this is the choice for you. You can opt to use pip to install all dependencies (see requirements.txt) but conda is strongly recommended to avoid package incompatibilities and/or downgrading existing package versions.
+If you're comfortable using command line, this is the choice for you.
 
 #### Installing ShiftScan
 
-**Windows user:** Please watch this fully detailed video on installation and usage, or follow these instructions to install ShiftScan.
-
 **Mac or Linux user:** Please watch this [fully detailed video](https://youtu.be/h63QPug3il8) on installation and usage, or follow [these instructions](https://github.com/samche42/ShiftScan/blob/main/Other_docs/Mac_Installing_Python_and_conda.md) to install ShiftScan.
 
+**Windows user:** Please watch this fully detailed video on installation and usage, or follow these instructions to install ShiftScan.
+
+___
+
+### B. ShiftScan Colab option
+
+The most user-friendly option for using the original ShiftScan algorithm, is via Google Colab (i.e. command line made simple). The link to the Colab notebook [is here](https://colab.research.google.com/drive/1ShHOWqqwMoYdsmMajNAvnpBKyKsDl5AG?usp=sharing). Please follow [this video](https://youtu.be/0s_StsQqHoA) for instructions on how to make a copy and use it to analyze your own data.
+
+___
+
+### C. ShiftScan app option
+
+The ShiftScan app is designed to make the software as accessible as possible, with a fully graphical, point-and-click interface. This is the most intuitive option for users who prefer to avoid command-line tools entirely. However, please note:
+
+ - System Compatibility: The app is available only for MacOS at this time.
+ - Performance Considerations: Processing and visualizing data in the app is much slower compared to other options due to the additional overhead of the GUI implementation. While it functions perfectly, users requiring high-speed processing are strongly encouraged to use the CLI.
+
+For detailed guidance on downloading, setting up, and using the app (as well as understanding its limitations), please watch this instructional video:
 ___
 
 ### Raw data format
