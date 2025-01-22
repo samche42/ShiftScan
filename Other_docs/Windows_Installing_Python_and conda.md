@@ -4,7 +4,7 @@
 
 2. Open Powershell by clicking on the program 
 
-3. In the newly opened Powershell terminal, type in ```python --version``` (some systems use ```py --version```) and hit enter.
+3. In the newly opened Powershell terminal, type in ```python --version``` and hit enter.
 
 4. If the message ```Python was not found; run without arguments ...``` pops up, you'll need to install Python. If something like ```Python 3.13.0``` pops up, you can skip ahead to installing miniconda.
 
@@ -27,7 +27,7 @@ ___
    
    e. You can move the installer to the trash once the installation is complete.
 
-5. Open a new PowerShell window and type in ```python --version``` (some systems use ```py --version```) to confirm that Python has been installed successfully
+5. Open a new PowerShell window and type in ```python --version``` to confirm that Python has been installed successfully
 
 On to the next step: Installing miniconda!
 
@@ -43,7 +43,7 @@ ___
 
 4. Close the PowerShell terminal
 
-5. Next, open the “Anaconda Powershell Prompt” instead of the regular PowerShell terminal
+5. Next, open the **“Anaconda Powershell Prompt”** instead of the regular PowerShell terminal
 
 6. Finally, to install ```git```, type in ```conda install -y git``` and then press enter.
 
@@ -51,4 +51,10 @@ ___
 
 ## Installing ShiftScan
 
-1. In the Anaconda Powershell Prompt terminal window navigate to your Downloads folder (or wherever you would like to store the ShiftScan tool). You can do this by typing in: ```cd 
+1. In the Anaconda Powershell Prompt terminal window navigate to your Downloads folder (or wherever you would like to store the ShiftScan tool). You can do this by typing in: ```cd .\Downloads\```
+
+2. Next, let's use git to clone the ShiftScan repo: ```git clone https://github.com/samche42/ShiftScan.git```
+
+3. Great! Next step, navigate into the ShiftScan folder and then into the scripts subfolder with: ```cd \ShiftScan\scripts```
+
+4. Now, we'll need to set up the conda environment for ShiftScan: 
