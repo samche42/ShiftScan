@@ -64,7 +64,7 @@ ___
 6. Test that the script is working with ```python multiprocessor_main.py -i example_input -m example_metadata/metadata.txt -o example_output```
 
 > [!IMPORTANT]
-> The first time you run ShiftScan it may take a long time and appear to hang. It is fine - the first time it's run on a new system, it creates a ```__pycache__``` folder, where it stores all it's important imports and ensures rapid runs for every subsequent usage. 
+> The first time you run ShiftScan it may take a long time and appear to hang. It is running and everything is fine, promise! The first time it's run on a new system, it creates a ```__pycache__``` folder, where it stores all it's important imports and ensures rapid runs for every subsequent usage. 
 
 ___
 
