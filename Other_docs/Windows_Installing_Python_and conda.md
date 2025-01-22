@@ -43,7 +43,7 @@ ___
 
 4. Close the PowerShell terminal
 
-5. Next, open the **“Anaconda Powershell Prompt”** instead of the regular PowerShell terminal
+5. Next, open the **“Anaconda Powershell Prompt”** *instead of* the regular PowerShell terminal
 
 6. Finally, to install ```git```, type in ```conda install -y git``` and then press enter.
 
@@ -57,4 +57,15 @@ ___
 
 3. Great! Next step, navigate into the ShiftScan folder and then into the scripts subfolder with: ```cd \ShiftScan\scripts```
 
-4. Now, we'll need to set up the conda environment for ShiftScan: 
+4. Now, we'll need to set up the conda environment for ShiftScan: ```conda env create --file=shiftscan.yml```
+
+5. Activate the environment using ```conda activate shiftscan```
+
+6. Test that the script is working with ```python main_multiprocessor.py -i example_input -m example_metadata/metadata.txt -o example_output```
+
+___
+
+## Running ShiftScan
+
+Any time that you want to run ShiftScan, you'll have to:
+1. Activate the conda environment with ```conda activate shiftscan```.
