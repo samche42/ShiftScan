@@ -20,7 +20,7 @@ ___
 
 ### B. ShiftScan Colab option
 
-The most user-friendly option for using the original ShiftScan algorithm, is via Google Colab (i.e. command line made simple). The link to the Colab notebook [is here](https://colab.research.google.com/drive/1ShHOWqqwMoYdsmMajNAvnpBKyKsDl5AG?usp=sharing). Please follow [this video](https://youtu.be/0s_StsQqHoA) for instructions on how to make a copy and use it to analyze your own data.
+Commandline usage is made user-friendly and easy via Google Colab. The link to the Colab notebook [is here](https://colab.research.google.com/drive/1ShHOWqqwMoYdsmMajNAvnpBKyKsDl5AG?usp=sharing). Please follow [this video](https://youtu.be/0s_StsQqHoA) for instructions on making a copy and using it to analyze your data.
 
 ___
 
@@ -98,7 +98,7 @@ Additionally, there are some additional parameters you can provide if you would 
 Data processing can take some time depending on the number of plates in the analysis. If you're using 4 CPUs, processing 100 plates (384-well) takes around 7 minutes. Please see the associated manuscript for additional details on performance. 
 
 > [!IMPORTANT]
->Several warnings will potentially be raised during running. These are all handled within the script. Unless they crash the program, these have been handled and are **NOT** a concern. As soon as I figure out out to stop those from being printed out (but still raised for the script to deal with the problem)I'll fix that
+>Several warnings could potentially be raised during running. These are all handled within the script. Unless they crash the program, these have been handled and are **NOT** a concern. As soon as I figure out to stop those from being printed out (but still raised for the script to deal with the problem) I'll fix that
 
 Once complete, 4 files would have been generated in the specified output directory:
  - "Final_curves.txt" includes all coordinates for original and cleaned/sliced curves
@@ -118,7 +118,7 @@ All available parameters and the option to use the ```--only_tm flag``` are the 
 ___
 ### Visualization
 
-This step is optional. The visualization script should be run using the ```i``` parameter to point to the directory with the four files generated from the previous step. The script is run with:
+This step is optional. The visualization script should be run using the ```-i``` parameter to point to the directory with the four files generated from the previous step. The script is run with:
 
 ```python3 visualization.py -i path/to/output/from/previous/step```
 
