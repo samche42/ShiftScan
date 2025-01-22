@@ -35,11 +35,11 @@ ___
 
 ## Installing miniconda 
 
-1. Open a new PowerShell terminal window, type in the following and then hit enter: ```curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -o miniconda.exe```
+1. Open a new PowerShell terminal window, type in the following and then hit enter: ```curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -o miniconda.exe```. This downloads the miniconda installer.
 
-2. Next, type in the following and then hit enter: ```Start-Process -FilePath ".\miniconda.exe" -ArgumentList "/S" -Wait```
+2. Next, we need to actually run the installer. Type in the following and then hit enter: ```Start-Process -FilePath ".\miniconda.exe" -ArgumentList "/S" -Wait```
 
-3. Next, remove the installer with: ```del miniconda.exe```
+3. When the installation is complete, you can remove the installer with: ```del miniconda.exe```
 
 4. Close the PowerShell terminal
 
