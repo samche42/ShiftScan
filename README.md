@@ -4,13 +4,13 @@ Analysis and visualization of high-throughput DSF data
 ## Usage Instructions
 ShiftScan is designed for high-performance analysis of DSF data. It offers multiple ways to interact with the software (command line, Google Colab, or an app) depending on your familiarity with command-line tools and your performance expectations.
 
+Input data (raw and metadata) need to follow specific data formats. Please see below for how to appropriately format input.
+
 ___
 
 ### A. Command-line option
 
-If you're comfortable using command line, this is the choice for you.
-
-#### Installing ShiftScan
+If you're comfortable using the command-line, this is the choice for you. Parameter options are listed further below. 
 
 **Mac user:** Please watch this [fully detailed video](https://youtu.be/h63QPug3il8) on installation and usage, or follow [these instructions](https://github.com/samche42/ShiftScan/blob/main/Other_docs/Mac_Installing_Python_and_conda.md) to install ShiftScan.
 
@@ -59,6 +59,7 @@ Metadata must be stored in the following format (Do NOT include control wells in
  - If your compounds are pure (I.e. not fractions), leave the 'FRACTION' column as zeros all the way down. 
 
 ___
+
 ### Running the analysis (default RAM-intensive mode)
 
 Navigate to where ShiftScan was installed (unless you've added it to your PATH). The analysis pipeline can be run with :
@@ -105,6 +106,8 @@ Once complete, 4 files would have been generated in the specified output directo
  - "Final_results.txt" has the results from all calculations, including final melting temperatures, amplitudes, failures, reasons for failures, etc
  - "Plate_report.txt" is a small table listing which plates passed or failed. For any plate in which 8 or more control wells failed, the entire plate is labelled a failure
  - "Potential_problems.txt" lists any wells that have consistently failed across 3 or more plates. This has no bearing on any of the results and is meant to serve in an informative capacity. For example, if the same well is failing in several plates, there may be a pipetting issue.
+
+___
 
 ### Running the analysis (Disk-intensive mode)
 If you are limited by available RAM but still need to run hundreds of plates, you may opt to use the disk-intensive mode of ShiftScan. 
