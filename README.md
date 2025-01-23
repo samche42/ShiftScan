@@ -14,7 +14,7 @@ If you're comfortable using the command-line, this is the choice for you. Parame
 
 **Mac user:** Please watch this [fully detailed video](https://youtu.be/h63QPug3il8) on installation and usage, or follow [these instructions](https://github.com/samche42/ShiftScan/blob/main/Other_docs/Mac_Installing_Python_and_conda.md) to install ShiftScan.
 
-**Windows user:** Please watch this [fully detailed video](placeholder) on installation and usage, or follow [these instructions](https://github.com/samche42/ShiftScan/blob/main/Other_docs/Windows_Installing_Python_and%20conda.md) to install ShiftScan.
+**Windows user:** Please watch this [fully detailed video](https://youtu.be/BteZhAc8mvQ) on installation and usage, or follow [these instructions](https://github.com/samche42/ShiftScan/blob/main/Other_docs/Windows_Installing_Python_and%20conda.md) to install ShiftScan.
 
 ___
 
