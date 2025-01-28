@@ -3,7 +3,7 @@
 import scipy.optimize as optimization
 from scipy.interpolate import splev, splrep
 from scipy.optimize import OptimizeWarning
-import warnings, sys
+import warnings, sys, os
 from scipy.signal import find_peaks
 import numpy as np
 import pandas as pd
