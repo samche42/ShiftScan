@@ -145,6 +145,8 @@ if __name__ == '__main__':
 
     print("Multiprocessing of wells started")
 
+    from DSF_functions import process_well
+
     with multiprocessing.Pool(processes=int(args.processors)) as pool:
         partial_process_wrapper = partial(process_well, smoothing_factor=smoothing_fact,normalize=normalize_data)
         results = pool.map(partial_process_wrapper, list_of_sub_dfs)
