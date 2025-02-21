@@ -7,7 +7,7 @@ import numpy as np
 import multiprocessing
 from multiprocessing import cpu_count
 from functools import partial
-from DSF_functions import slice_list, clean_curve, split_curves,add_curve_data, boltzmann_sigmoid, initial_params, Model_data, process_well
+import DSF_functions
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input_dir", help="Full file path to directory with input files")
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     ################################
     print("Reading in metadata")
     try:
-        map_raw_df = pd.read_csv(args.metadata,sep='\t',header=0)
+        map_raw_df = pd.read_csv(args.metadata,sep=args.delimiter,header=0)
     except:
         print("Metadata could not be read in. Please check that data is tab delimited and has a header in the first row")
         sys.exit()

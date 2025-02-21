@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     #Read in metadata 
     try:
-        map_raw_df = pd.read_csv(args.metadata,sep='\t',header=0)
+        map_raw_df = pd.read_csv(args.metadata,args.delimiter,header=0)
     except:
         print("Metadata could not be read in. Please check that data is tab delimited and has a header in the first row")
         sys.exit()

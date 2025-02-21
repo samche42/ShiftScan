@@ -83,6 +83,7 @@ tab5_selected = {**base_selected_style,'background': color5}
 
 print("Reading in data. This can take a few minutes if processing many plates")
 df_results = pd.read_csv(args.input_dir+'/Only_Tm_values.txt', sep='\t', header = 0)
+df_results['Fraction'].fillna(0, inplace=True)
 df_curves = pd.read_csv(args.input_dir+'/Only_Tm_curves.txt', sep='\t', header = 0)
 
 columns_to_round = ['Smooth_Tm','Amplitude','Curve_height']
