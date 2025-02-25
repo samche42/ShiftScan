@@ -42,13 +42,6 @@ if not os.path.exists(output_dir_string):
     os.makedirs(output_dir_string)
     print(f"Output directory not found. Creating directory at '{output_dir_string}'")
 
-#Define control columns
-control_string = args.control_cols
-control_list = [int(control) for control in control_string.split(",")]
-if len(control_list) == 0:
-    print("ERROR: No control columns specified")
-    sys.exit() 
-
 #Lets get the input data correctly formatted!
 if args.file_origin == 'RocheLightCycler':
     try:
@@ -100,11 +93,27 @@ if __name__ == '__main__':
     semifinal_df2 = pd.merge(semifinal_df,tmp,on= 'Assay_Plate', how = 'inner')
     final_df = pd.merge(semifinal_df2,map_raw_df[['Unique_key','Compound','Fraction']].drop_duplicates(), on = 'Unique_key', how = 'left') #Left keeps all wells (i.e controls with no compounds)
 
-    #Assign well types
-    is_control = final_df['Column'].isin(control_list)
-    is_blank = final_df['Compound'].isnull()
-    final_df['Well_type'] = np.select([is_control, is_blank],['Control', 'Blank'],default='Experimental')
-    print("Control columns assigned")
+    #Define control columns
+    control_string = args.control_cols
+    if control_string.endswith((".txt",".tab")):
+        well_mapping_df = pd.read_csv(control_string,sep=args.delimiter,header=0)
+        well_mapping_df['Row'] = well_mapping_df['Well'].str[0] #Take first character from Well string and make it Row value 
+        well_mapping_df['Column'] = well_mapping_df['Well'].str[1:] #Take everything beyond first character as Column (includes padded zeros, as temporarily kept as string)
+        well_mapping_df['Column'] = well_mapping_df['Column'].str.replace(r'^(0+)', '',regex=True) #Strip padding zeros
+        well_mapping_df['Unique_key'] = well_mapping_df['Assay_Plate']+'_'+well_mapping_df['Row']+well_mapping_df['Column'] #Add in new column with generated unique key
+        well_mapping_df = well_mapping_df.drop(['Assay_Plate','Well'],axis = 1)
+        final_df = pd.merge(final_df, well_mapping_df,on = 'Unique_key', how = 'left')
+    else:
+        control_list = [int(control) for control in control_string.split(",")]
+        if len(control_list) == 0:
+            print("ERROR: No control columns specified")
+            sys.exit() 
+
+        #Assign well types
+        is_control = final_df['Column'].isin(control_list)
+        is_blank = final_df['Compound'].isnull()
+        final_df['Well_type'] = np.select([is_control, is_blank],['Control', 'Blank'],default='Experimental')
+        print("Control columns assigned")
 
     #Let's delete a few dataframes taking up memory
     del semifinal_df,semifinal_df2,tmp, map_raw_df
