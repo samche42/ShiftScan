@@ -60,6 +60,31 @@ Metadata must be stored in the following format (Do NOT include control wells in
 
 ___
 
+### Well assignment format
+
+By default, ShiftScan assumes that the control wells are in columns 1 & 2. This can be changed in one of two ways:
+
+**Option 1: ** If the controls are in different columns e.g. first and last, then you can provide a comma-delimiedt list of the control columns using the -c flag. I.e. ```-c 1,24```.
+
+**Option 2: ** You may alternatively opt to provide a tab-delimited file that assigns a "type" to each well. I.e. ```-c /path/to/wherver/you/stored/the/well_mapping.txt```
+
+The format for option 2 is as follows:
+
+| Assay_Plate       | Well | Well_type     |
+|-------------------|------|--------------|
+| Aro3_022125_1    | A1   | Blank        |
+| Aro3_022125_1    | A2   | Blank        |
+| Aro3_022125_1    | A3   | Experimental |
+| Aro3_022125_1    | A4   | Experimental |
+| Aro3_022125_1    | A5   | Experimental |
+| Aro3_022125_1    | A6   | Control      |
+| Aro3_022125_1    | A7   | Control      |
+| Aro3_022125_1    | A8   | Control      |
+
+A full example of a mapping file can be found here
+
+___
+
 ### Running the analysis (default RAM-intensive mode)
 
 Navigate to where ShiftScan was installed (unless you've added it to your PATH). The analysis pipeline can be run with :
