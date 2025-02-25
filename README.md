@@ -64,24 +64,25 @@ ___
 
 By default, ShiftScan assumes that the control wells are in columns 1 & 2. This can be changed in one of two ways:
 
-**Option 1: ** If the controls are in different columns e.g. first and last, then you can provide a comma-delimiedt list of the control columns using the -c flag. I.e. ```-c 1,24```.
+**Option 1:** If the controls are in different columns e.g. first and last, then you can provide a comma-delimiedt list of the control columns using the -c flag. I.e. ```-c 1,24```.
 
-**Option 2: ** You may alternatively opt to provide a tab-delimited file that assigns a "type" to each well. I.e. ```-c /path/to/wherver/you/stored/the/well_mapping.txt```
+**Option 2:** You may alternatively opt to provide a tab-delimited file that assigns a "type" to each well. I.e. ```-c /path/to/wherver/you/stored/the/well_mapping.txt```
 
 The format for option 2 is as follows:
 
-| Assay_Plate       | Well | Well_type     |
-|-------------------|------|--------------|
-| Aro3_022125_1    | A1   | Blank        |
-| Aro3_022125_1    | A2   | Blank        |
-| Aro3_022125_1    | A3   | Experimental |
-| Aro3_022125_1    | A4   | Experimental |
-| Aro3_022125_1    | A5   | Experimental |
-| Aro3_022125_1    | A6   | Control      |
-| Aro3_022125_1    | A7   | Control      |
-| Aro3_022125_1    | A8   | Control      |
+| Assay_Plate    | Well | Well_type     |
+|---------------|------|--------------|
+| Assay_plate_5  | A1   | Blank        |
+| Assay_plate_5  | A2   | Blank        |
+| Assay_plate_5  | A3   | Experimental |
+| Assay_plate_5  | A4   | Experimental |
+| Assay_plate_5  | A5   | Experimental |
+| Assay_plate_5 | A6   | Control      |
+| Assay_plate_5 | A7   | Control      |
+| Assay_plate_5 | A8   | Control      |
 
-A full example of a mapping file can be found here
+
+A full example of a mapping file can be found [here](https://github.com/samche42/ShiftScan/blob/main/scripts/example_metadata/well_mapping.txt)
 
 ___
 
