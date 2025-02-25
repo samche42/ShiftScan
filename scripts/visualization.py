@@ -189,25 +189,28 @@ def generate_first_derivative_curve(selected_unique_key):
     subplots = subplots.drop_duplicates()
     subplots_x = subplots["Temps"].values.tolist()
     subplots_y = subplots["Smooth Fluorescence"].values.tolist()
-    subplots_subplots = subplots["Subplot"].values.tolist()
-    subplots_y_grad = list(np.gradient(subplots_y, subplots_x))
-    subplot_deriv_df = pd.DataFrame({'Temps': subplots_x,'Smooth': subplots_y,'1st_deriv': subplots_y_grad,'Subplot':subplots_subplots})
-    #Drawing the plot
-    # 2. Draw the spliced subplots
-    fig = px.scatter(subplot_deriv_df, x='Temps', y='1st_deriv', color='Subplot', 
-                  color_discrete_sequence=[color3,color4,color2,color1],
-                  labels={'Temps': 'Temperature', '1st_deriv': 'DF/DT'})
-    # 3. Add in the 'original' curve as a line
-    fig.add_scatter(x=orig_deriv_df['Temps'], y=orig_deriv_df['1st_deriv'],line={'color':graph_gray,'dash':'dot'}, name = 'Original data')
-    # 4. Add Avg ctrl Tm line
-    fig.add_vline(x=avg_ctrl_Tm, line=dict(color='red', width=2, dash='dot'), name = 'Avg. ctrl Tm for plate')
-    # 5. Add well final Tms
-    for value in well_Tms:
-        fig.add_vline(x=value, line=dict(color='blue', width=1, dash='dash'), name = 'Tm(s) for selected well')
-    # 7. Add labels
-    fig.update_layout(title = "First derivative <br><sup> <span style='color:red'>Red:</span> Avg. ctrl Tm for plate, <span style='color:blue'>Blue:</span> Well Tm", xaxis_title='Temperature',yaxis_title='DF/DT')
-    fig.data = fig.data[::-1]
-    return fig
+    if len(subplots_y) != 0:
+        subplots_subplots = subplots["Subplot"].values.tolist()
+        subplots_y_grad = list(np.gradient(subplots_y, subplots_x))
+        subplot_deriv_df = pd.DataFrame({'Temps': subplots_x,'Smooth': subplots_y,'1st_deriv': subplots_y_grad,'Subplot':subplots_subplots})
+        #Drawing the plot
+        # 2. Draw the spliced subplots
+        fig = px.scatter(subplot_deriv_df, x='Temps', y='1st_deriv', color='Subplot', 
+                      color_discrete_sequence=[color3,color4,color2,color1],
+                      labels={'Temps': 'Temperature', '1st_deriv': 'DF/DT'})
+        # 3. Add in the 'original' curve as a line
+        fig.add_scatter(x=orig_deriv_df['Temps'], y=orig_deriv_df['1st_deriv'],line={'color':graph_gray,'dash':'dot'}, name = 'Original data')
+        # 4. Add Avg ctrl Tm line
+        fig.add_vline(x=avg_ctrl_Tm, line=dict(color='red', width=2, dash='dot'), name = 'Avg. ctrl Tm for plate')
+        # 5. Add well final Tms
+        for value in well_Tms:
+            fig.add_vline(x=value, line=dict(color='blue', width=1, dash='dash'), name = 'Tm(s) for selected well')
+        # 7. Add labels
+        fig.update_layout(title = "First derivative <br><sup> <span style='color:red'>Red:</span> Avg. ctrl Tm for plate, <span style='color:blue'>Blue:</span> Well Tm", xaxis_title='Temperature',yaxis_title='DF/DT')
+        fig.data = fig.data[::-1]
+        return fig
+    else:
+        return None
 
 def generate_all_curves(unique_key_list):
     hit_curve_data_df = df_curves[df_curves['Unique_key'].isin(unique_key_list)]
@@ -387,7 +390,10 @@ app.layout = html.Div([
                         dcc.Loading(dcc.Graph(id = 'Tm_plates'),type = 'dot', color = color2),
                             ], style = {'display':'inline-block','vertical-align':'top', 'width': '50%','overflow-y':'scroll', 'height':'600px'}),
                #Child2: Selected curve (Right of screen)
-                html.Div([],id='popup',style = {'display':'inline-block','vertical-align':'top', 'width': '50%'})
+                html.Div([
+                    html.Div([],id='first_deriv_popup',style = {}),
+                    html.Div([],id='popup',style = {})
+                    ],id='graphs_block',style = {'display':'inline-block','vertical-align':'top', 'width': '50%'}),
                 ],label='Melting temp overview', style=tab3_style, selected_style=tab3_selected, value ='tab-3'), 
 
             #HIT TABLE TAB
@@ -646,15 +652,21 @@ def generate_heatmaps(color_choice,tabValue, dropdown_choice):
 #Render curve graph for selected data in Melting temp tab
 @app.callback(
     Output('popup', 'children'),
+    Output('first_deriv_popup','children'),
     Input('Tm_plates', 'clickData'))
 def update_popup(clickData):
     if clickData:
         selected_unique_key = clickData['points'][0]['customdata'][5]
         curve_figure = generate_selected_curve(selected_unique_key)
-        graph_object = dcc.Graph(id = 'selected_curve',figure=curve_figure)
-        return graph_object
+        first_deriv_curve = generate_first_derivative_curve(selected_unique_key)
+        orig_graph_object = dcc.Graph(id = 'selected_curve',figure=curve_figure)
+        if first_deriv_curve == None:
+            return orig_graph_object, None
+        else:
+            first_deriv_graph_object = dcc.Graph(id = 'first_deriv_curve',figure=first_deriv_curve)
+            return orig_graph_object, first_deriv_graph_object
     else:
-        return None
+        return None, None
 
 ####################
 #TAB 4 visualizations
@@ -887,4 +899,4 @@ def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update
 
 # Run the app
 if __name__ == '__main__':
-    app.run(host ='0.0.0.0',port = args.port, debug=True)
+    app.run(host ='0.0.0.0',port = args.port, debug=False)
