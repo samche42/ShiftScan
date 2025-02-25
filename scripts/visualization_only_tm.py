@@ -110,7 +110,7 @@ def generate_selected_curve(selected_unique_key):
                 color_discrete_sequence=[color3,color4,color2,color1],
                 labels={'Temps': 'Temperature', 'Smooth Fluorescence': 'Normalized fluorescence'},
                 hover_name='Well',
-                render_mode = 'auto', height = 500, title = 'Well '+well+"<br><sup> Assay Plate: "+plate+"</sup>")
+                render_mode = 'auto', height = 500, title = 'Original curve, Well '+well+"<br><sup> Assay Plate: "+plate+"</sup>")
     selected_curve_figure.add_scatter(x=original_selected['Temps'], y=original_selected['Smooth Fluorescence'],line={'color':graph_gray,'dash':'dot'}, name = 'Original data')
     selected_curve_figure.update_layout(title = {'font':{'size':15}})
     selected_curve_figure.data = selected_curve_figure.data[::-1]
