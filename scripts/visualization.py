@@ -218,9 +218,19 @@ def generate_all_curves(unique_key_list):
     height = 25*num_rows
     facet_row_max_spacing = 3/height
     all_curves_figure = px.scatter(hit_curve_data_df, x='Temps', y='Smooth Fluorescence', color='Subplot', color_discrete_sequence=[graph_gray,color3,color4,color2,color1],
-                        hover_name='Well', hover_data={'Final_decision':False, 'Assay_Plate':False, 'Temps':False, 'Smooth Fluorescence':False, 'Error':True, 'Ctrl_Tm_z-score':True}, #Hover data (Tooltip in Spotfire)
+                        hover_name='Well', hover_data={'Source_Plate':True, 'Final_decision':False, 'Assay_Plate':False, 'Temps':False, 'Smooth Fluorescence':False, 'Error':False, 'Ctrl_Tm_z-score':False}, #Hover data (Tooltip in Spotfire)
+                        category_orders={'Unique_key': unique_key_list}, #Maintain row order for facte plots!
                         facet_col='Unique_key', facet_col_wrap=5, facet_col_spacing=0.08,facet_row_spacing = facet_row_max_spacing,#Facet plots by plate and only allow 2 columns. Column spacing had to be adjusted to allow for individual y-axes
                         render_mode = 'auto', height = height) #Height of plots is equal to half the number of plates (coz 2 columns) with each plot 300px high. Width will have to be adjusted
+    for annotation in all_curves_figure.layout.annotations:
+        text = annotation.text
+        unique_key = text.split('=')[1]
+        subset = hit_curve_data_df.loc[hit_curve_data_df['Unique_key'] == unique_key, ['Source_Plate', 'Well']].drop_duplicates()
+        source = subset['Source_Plate'].iloc[0]
+        well = subset['Well'].iloc[0]
+        annotation.text = (
+                    f"Plate: {source}, Well: {well}")
+
     return all_curves_figure
 
 def generate_barplot(df,x_axis, color_by):
@@ -416,7 +426,9 @@ app.layout = html.Div([
                             hidden_columns=['Max_ctrl_zscore_for_plate','Hit','Min_ctrl_zscore_for_plate','group'], 
                             css=[{'selector': '.show-hide', 'rule': 'display: none'},{'selector':'.export','rule': 'margin:5px'}],
                             row_deletable=True,
-                            sort_action='native',
+                            sort_action='custom',
+                            sort_mode='single',
+                            sort_by=[],
                             export_format='xlsx',
                             style_data_conditional=data_table_style_data_conditional, 
                             style_table = {'height':'250px','overflow-y':'scroll'},
@@ -522,6 +534,7 @@ app.layout = html.Div([
                     style = {'display':'inline-block','vertical-align':'top', 'width': '40%', 'overflow-x':'scroll', 'margin-top': '20px'}), #Child B style
                 
                 #Child C: All graphs for hits
+                html.Div([dcc.Dropdown(id='hits_dropdown', options=[], style={'display': 'none'})]),
                 html.Div([],id = 'all_graphs_div', style = {'width': '95%'})
                 ],label='Hit list', style=tab4_style, selected_style=tab4_selected, value ='tab-4'), #Tab div
             ],id ='tabs',value = 'tab-0',vertical =False, style = {'width':'100%'}) #All tabs style and other details
@@ -672,6 +685,27 @@ def update_popup(clickData):
 #TAB 4 visualizations
 ####################
 
+#Custom Sorting
+@app.callback(
+    Output('results_table_datatable', 'data'),
+    Input('results_table_datatable', 'sort_by'),
+    State('results_table_datatable', 'data')
+)
+def sort_table(sort_by, rows):
+    if not sort_by or rows is None:
+        return rows
+
+    df = pd.DataFrame(rows)
+    # Apply all sorts in reverse order so that the first sort takes precedence
+    for sort in reversed(sort_by):
+        df.sort_values(
+            by=sort['column_id'],
+            ascending=sort['direction'] == 'asc',
+            inplace=True,
+            kind='mergesort'  # stable sort preserves prior order
+        )
+    return df.to_dict('records') 
+
 # En/Dis-able options based on hit ID choice
 @app.callback(
     Output('relative_zscore_cutoff', 'disabled'),
@@ -753,7 +787,9 @@ def update_hit_table(n_clicks, previous, current, hit_choice_value, zscore_cutof
                 hidden_columns=['Max_ctrl_zscore_for_plate','Hit','Min_ctrl_zscore_for_plate','group'], 
                 style_as_list_view=True, 
                 row_deletable=True, 
-                sort_action='native',
+                sort_action='custom',
+                sort_mode='single',
+                sort_by=[],
                 export_format='xlsx',
                 style_table = {'height':'250px','overflow-y':'scroll'},
                 style_cell={'fontSize':12, 'font-family':'Arial'},
@@ -776,7 +812,9 @@ def update_hit_table(n_clicks, previous, current, hit_choice_value, zscore_cutof
                 hidden_columns=['Max_ctrl_zscore_for_plate','Hit','Min_ctrl_zscore_for_plate','group'], 
                 style_as_list_view=True, 
                 row_deletable=True, 
-                sort_action='native',
+                sort_action='custom',
+                sort_mode='single',
+                sort_by=[],
                 export_format='xlsx',
                 style_table = {'height':'250px','overflow-y':'scroll'},
                 style_cell={'fontSize':12, 'font-family':'Arial'},
@@ -827,76 +865,128 @@ def update_selected_row_color(active,n_clicks, table_data):
             return style, None, None, True
     raise PreventUpdate
 
-#Generating or clearing graphs for all hits
+# Generating or clearing graphs for all hits
 @app.callback(
     Output('all_graphs_div', 'children'),
     [Input('generate', 'n_clicks'),
      Input('clear', 'n_clicks'),
      Input('summary_graphs', 'n_clicks'),
-     Input('submit', 'n_clicks'),],
-    [State('results_table_datatable', 'data')])
-def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update_clicks, current_table_data):
+     Input('submit', 'n_clicks'),
+     Input('hits_dropdown', 'value')], 
+    [State('results_table_datatable', 'derived_virtual_data')]
+)
+def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update_clicks, hit_choice, current_table_data):
     ctx = callback_context
     if not ctx.triggered:
         raise PreventUpdate
+
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    if trigger_id == 'generate':
-        if generate_clicks > 0:
-            key_list = [d['Unique_key'] for d in current_table_data]
-            if len(key_list) > 50:
-                cropped_list = key_list[:50]
-                new_figure = generate_all_curves(cropped_list)
-                new_figure.update_yaxes(matches=None)
-                new_figure.for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True))
-                new_figure.update_layout(height=200 * len(cropped_list)/5, title = "WARNING: Too many figures to plot. <br><sup> The first 50 have been generated. <br>", title_font_color="red", margin=dict(t=100)) #Each plot is 400px high (i.e. 200 is half of 400)
-                graph_object = dcc.Graph(id='all_graphs_object', figure=new_figure, style={'font-family': 'Arial'})
-                return graph_object
-            else:
-                new_figure = generate_all_curves(key_list)
-                new_figure.update_yaxes(matches=None)
-                new_figure.for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True))
-                new_figure.update_layout(height=200 * len(key_list)/5) #Each plot is 400px high (i.e. 200 is half of 400)
-                graph_object = dcc.Graph(id='all_graphs_object', figure=new_figure, style={'font-family': 'Arial'})
-                return graph_object
+    
+    # Define a constant for page size
+    max_hits = 50
+    current_page = hit_choice if hit_choice is not None else 0
+
+    if trigger_id == 'generate' or trigger_id == 'hits_dropdown':
+        if current_table_data is None:
+            raise PreventUpdate
+
+        key_list = [d['Unique_key'] for d in current_table_data]
+
+        if not key_list:
+            return None # Return nothing if there's no data
+
+        if len(key_list) > max_hits:
+            current_page = hit_choice if trigger_id == 'hits_dropdown' else 0
+            # Create options for the dropdown
+            num_pages = math.ceil(len(key_list) / max_hits)
+            dropdown_options = []
+            for i in range(num_pages):
+                start_item = i * max_hits + 1
+                end_item = min((i + 1) * max_hits, len(key_list))
+                dropdown_options.append({'label': f'Hits {start_item} - {end_item}', 'value': i})
+
+            # Create the dropdown component
+            hits_choices_dropdown = html.Div([
+                html.Label('Select hit range:'.format(len(key_list))),
+                dcc.Dropdown(
+                    id='hits_dropdown',
+                    options=dropdown_options,
+                    value=current_page,
+                    clearable=False,
+                    style={'width': '150px', 'margin-top': '5px','fontSize':12}
+                )
+            ], style={'font-family': 'Arial', 'margin-bottom': '5px'})
+
+            # Slice the list to get keys for the current page
+            start_index = current_page * max_hits
+            end_index = start_index + max_hits
+            paginated_key_list = key_list[start_index:end_index]
+
+            # Generate the figure for the current page
+            new_figure = generate_all_curves(paginated_key_list)
+            new_figure.update_yaxes(matches=None)
+            new_figure.for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True))
+            # Adjust height based on the number of items on the current page
+            new_figure.update_layout(height=200 * len(paginated_key_list) / 5)
+            
+            graph_object = dcc.Graph(id='all_graphs_object', figure=new_figure, style={'font-family': 'Arial'})
+            
+            # Return the dropdown AND the graph
+            return [hits_choices_dropdown, graph_object]
+
+        # --- ORIGINAL LOGIC (for less than 50 hits) ---
+        else:
+            new_figure = generate_all_curves(key_list)
+            new_figure.update_yaxes(matches=None)
+            new_figure.for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True))
+            new_figure.update_layout(height=200 * len(key_list) / 5)
+            graph_object = dcc.Graph(id='all_graphs_object', figure=new_figure, style={'font-family': 'Arial'})
+            return graph_object
+
     elif trigger_id == 'summary_graphs':
-            if (summary_clicks is not None) & (current_table_data is not None):
-                hits_key_list = [d['Unique_key_subplot'] for d in current_table_data]
-                df_results.loc[:, 'Hit'] = np.where(df_results['Unique_key_subplot'].isin(hits_key_list), 'Hit', 'Not a hit') #Assign hits as defined in the current hit list
-                df_results.loc[:, 'Hit'] = np.where(df_results['Well_type'] == 'Control', "Control", df_results['Hit'])
-                df_hits_raw = df_results[df_results['Hit'] == 'Hit']
-                df_hits_sub = df_hits_raw.loc[:, ['Platename','Fraction','Well','Hit']]
-                df_hits = df_hits_sub.drop_duplicates()
-                Hit_distribution_figure = generate_scatterplot()
-                Hits_per_plate_figure = generate_barplot(df_hits,'Platename', 'Fraction')
-                Hits_per_fraction_figure = generate_barplot(df_hits, 'Fraction', 'Platename')
-            else:
-                Hit_distribution_figure = None
-                Hits_per_plate_figure = None
-                Hits_per_fraction_figure = None
-            graph_Div = html.Div([
-                    html.Hr(style = {'margin-bottom':'0px','width': '100%', 'margin-top':'10px'}), #Break
-                    html.Div([
-                                html.H3('Distribution of hits:',style = {'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'20px'}),
-                                dcc.Loading(dcc.Graph(id = 'Hit_distribution_graph',figure=Hit_distribution_figure),type = 'dot', color = color5)
-                            ], id = 'hit_plots_div1', style = {'display':'inline-block','vertical-align':'top', 'width': '100%'}),
-                    html.Hr(style = {'margin-bottom':'0px','width': '100%', 'margin-top':'10px'}), #Break
-                    html.Div([
-                                html.H3('Hits per plate colored by fraction:',style = {'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'20px'}),
-                                dcc.Loading(dcc.Graph(id = 'Hits_per_plate',figure=Hits_per_plate_figure),type = 'dot', color = color5)
-                            ], id = 'hit_plots_div2', style = {'display':'inline-block','vertical-align':'top', 'width': '50%'}),
-                    html.Div([
-                                html.H3('Hits per fraction colored by plate:',style = {'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'20px'}),
-                                dcc.Loading(dcc.Graph(id = 'Hits_per_fraction',figure=Hits_per_fraction_figure),type = 'dot', color = color5)
-                            ], id = 'hit_plots_div3', style = {'display':'inline-block','vertical-align':'top', 'width': '50%'})])
-            return graph_Div
+        if (summary_clicks is not None) and (current_table_data is not None):
+            hits_key_list = [d['Unique_key_subplot'] for d in current_table_data]
+            df_results.loc[:, 'Hit'] = np.where(df_results['Unique_key_subplot'].isin(hits_key_list), 'Hit', 'Not a hit')
+            df_results.loc[:, 'Hit'] = np.where(df_results['Well_type'] == 'Control', "Control", df_results['Hit'])
+            df_hits_raw = df_results[df_results['Hit'] == 'Hit']
+            df_hits_sub = df_hits_raw.loc[:, ['Platename','Fraction','Well','Hit']]
+            df_hits = df_hits_sub.drop_duplicates()
+            Hit_distribution_figure = generate_scatterplot()
+            Hits_per_plate_figure = generate_barplot(df_hits,'Platename', 'Fraction')
+            Hits_per_fraction_figure = generate_barplot(df_hits, 'Fraction', 'Platename')
+        else:
+            Hit_distribution_figure = None
+            Hits_per_plate_figure = None
+            Hits_per_fraction_figure = None
+        
+        graph_Div = html.Div([
+            html.Hr(style={'margin-bottom':'0px','width': '100%', 'margin-top':'10px'}),
+            html.Div([
+                html.H3('Distribution of hits:',style={'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'20px'}),
+                dcc.Loading(dcc.Graph(id='Hit_distribution_graph',figure=Hit_distribution_figure),type='dot', color=color5)
+            ], id='hit_plots_div1', style={'display':'inline-block','vertical-align':'top', 'width': '100%'}),
+            html.Hr(style={'margin-bottom':'0px','width': '100%', 'margin-top':'10px'}),
+            html.Div([
+                html.H3('Hits per plate colored by fraction:',style={'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'20px'}),
+                dcc.Loading(dcc.Graph(id='Hits_per_plate',figure=Hits_per_plate_figure),type='dot', color=color5)
+            ], id='hit_plots_div2', style={'display':'inline-block','vertical-align':'top', 'width': '50%'}),
+            html.Div([
+                html.H3('Hits per fraction colored by plate:',style={'font-family': 'Arial','margin-bottom':'10px', 'margin-top':'20px'}),
+                dcc.Loading(dcc.Graph(id='Hits_per_fraction',figure=Hits_per_fraction_figure),type='dot', color=color5)
+            ], id='hit_plots_div3', style={'display':'inline-block','vertical-align':'top', 'width': '50%'})
+        ])
+        return graph_Div
+        
     elif trigger_id == 'clear':
         if (clear_clicks is not None):
             return None
+            
     elif trigger_id == 'submit':
         if update_clicks is not None:
             return None
+            
     raise PreventUpdate
 
 # Run the app
 if __name__ == '__main__':
-    app.run(host ='0.0.0.0',port = args.port, debug=False)
+    app.run(host ='0.0.0.0',port = args.port, debug=True)
