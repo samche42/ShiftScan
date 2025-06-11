@@ -214,22 +214,29 @@ def generate_first_derivative_curve(selected_unique_key):
 
 def generate_all_curves(unique_key_list):
     hit_curve_data_df = df_curves[df_curves['Unique_key'].isin(unique_key_list)]
-    num_rows = math.ceil(len(unique_key_list)/10)
-    height = 25*num_rows
-    facet_row_max_spacing = 3/height
-    all_curves_figure = px.scatter(hit_curve_data_df, x='Temps', y='Smooth Fluorescence', color='Subplot', color_discrete_sequence=[graph_gray,color3,color4,color2,color1],
-                        hover_name='Well', hover_data={'Source_Plate':True, 'Final_decision':False, 'Assay_Plate':False, 'Temps':False, 'Smooth Fluorescence':False, 'Error':False, 'Ctrl_Tm_z-score':False}, #Hover data (Tooltip in Spotfire)
-                        category_orders={'Unique_key': unique_key_list}, #Maintain row order for facte plots!
-                        facet_col='Unique_key', facet_col_wrap=5, facet_col_spacing=0.08,facet_row_spacing = facet_row_max_spacing,#Facet plots by plate and only allow 2 columns. Column spacing had to be adjusted to allow for individual y-axes
-                        render_mode = 'auto', height = height) #Height of plots is equal to half the number of plates (coz 2 columns) with each plot 300px high. Width will have to be adjusted
+    if len(unique_key_list) < 6: #Preventing squashed images
+        plot_num = len(unique_key_list)
+        all_curves_figure = px.scatter(hit_curve_data_df, x='Temps', y='Smooth Fluorescence', color='Subplot', color_discrete_sequence=[graph_gray,color3,color4,color2,color1],
+                            hover_name='Well', hover_data={'Source_Plate':True, 'Final_decision':False, 'Assay_Plate':False, 'Temps':False, 'Smooth Fluorescence':False, 'Error':False, 'Ctrl_Tm_z-score':False}, #Hover data (Tooltip in Spotfire)
+                            category_orders={'Unique_key': unique_key_list},
+                            facet_col='Unique_key',facet_col_spacing=0.08)
+
+    else:
+        num_rows = math.ceil(len(unique_key_list)/10)
+        height = 25*num_rows
+        facet_row_max_spacing = 3/height
+        all_curves_figure = px.scatter(hit_curve_data_df, x='Temps', y='Smooth Fluorescence', color='Subplot', color_discrete_sequence=[graph_gray,color3,color4,color2,color1],
+                            hover_name='Well', hover_data={'Source_Plate':True, 'Final_decision':False, 'Assay_Plate':False, 'Temps':False, 'Smooth Fluorescence':False, 'Error':False, 'Ctrl_Tm_z-score':False}, #Hover data (Tooltip in Spotfire)
+                            category_orders={'Unique_key': unique_key_list}, #Maintain row order for facte plots!
+                            facet_col='Unique_key', facet_col_wrap=5, facet_col_spacing=0.08,facet_row_spacing = facet_row_max_spacing,#Facet plots by plate and only allow 5 columns. Column spacing had to be adjusted to allow for individual y-axes
+                            render_mode = 'auto', height = height) #Height of plots is equal to half the number of plates (coz 2 columns) with each plot 300px high. Width will have to be adjusted
     for annotation in all_curves_figure.layout.annotations:
         text = annotation.text
         unique_key = text.split('=')[1]
         subset = hit_curve_data_df.loc[hit_curve_data_df['Unique_key'] == unique_key, ['Source_Plate', 'Well']].drop_duplicates()
         source = subset['Source_Plate'].iloc[0]
         well = subset['Well'].iloc[0]
-        annotation.text = (
-                    f"Plate: {source}, Well: {well}")
+        annotation.text = (f"Plate: {source}, Well: {well}")
 
     return all_curves_figure
 
@@ -534,8 +541,15 @@ app.layout = html.Div([
                     style = {'display':'inline-block','vertical-align':'top', 'width': '40%', 'overflow-x':'scroll', 'margin-top': '20px'}), #Child B style
                 
                 #Child C: All graphs for hits
-                html.Div([dcc.Dropdown(id='hits_dropdown', options=[], style={'display': 'none'})]),
-                html.Div([],id = 'all_graphs_div', style = {'width': '95%'})
+                dcc.Store(id='current_table_data_store'), # Use dcc.Store to pass data
+                html.Div(id='hits_dropdown_container', children=[
+                    html.Div([
+                        html.Label('Select hit range:'),
+                        dcc.Dropdown(id='hits_dropdown', options=[], value=0, clearable=False,
+                                     style={'width': '150px', 'margin-top': '5px','fontSize':12})
+                    ], style={'font-family': 'Arial', 'margin-bottom': '5px'})
+                ], style={'display': 'none'}), # Initially hide the dropdown container
+                html.Div(id='all_graphs_div', style={'width': '95%'})
                 ],label='Hit list', style=tab4_style, selected_style=tab4_selected, value ='tab-4'), #Tab div
             ],id ='tabs',value = 'tab-0',vertical =False, style = {'width':'100%'}) #All tabs style and other details
 ],id = 'page')
@@ -865,6 +879,73 @@ def update_selected_row_color(active,n_clicks, table_data):
             return style, None, None, True
     raise PreventUpdate
 
+
+# Callback to store the table data (assuming it's generated elsewhere)
+@app.callback(
+    Output('current_table_data_store', 'data'),
+    [Input('generate', 'n_clicks'),
+     Input('submit', 'n_clicks')],
+    [State('results_table_datatable', 'derived_virtual_data')] # Assuming this exists
+)
+def store_table_data(generate_clicks, submit_clicks, current_table_data):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    if current_table_data is not None:
+        return current_table_data
+    raise PreventUpdate
+
+# Callback to manage the visibility and options of the hits_dropdown
+@app.callback(
+    [Output('hits_dropdown_container', 'style'),
+     Output('hits_dropdown', 'options'),
+     Output('hits_dropdown', 'value')],
+    [Input('current_table_data_store', 'data'),
+     Input('submit', 'n_clicks'),
+     Input('clear', 'n_clicks'),
+     Input('summary_graphs', 'n_clicks'),
+     Input('generate', 'n_clicks')], # Also trigger on generate to reset value
+    [State('hits_dropdown', 'value')] # Keep the current value if possible
+)
+def manage_hits_dropdown(current_table_data, update_clicks, clear_clicks, summary_clicks, generate_clicks, current_dropdown_value):
+    ctx = dash.callback_context
+    if not ctx.triggered_id or not current_table_data:
+        return {'display': 'none'}, [], 0
+
+    triggered_id = ctx.triggered_id
+
+    # If 'submit', 'clear', or 'summary_graphs' were most recently clicked,
+    # or if there's no data, hide and clear the dropdown.
+    if triggered_id in ['submit', 'clear', 'summary_graphs']:
+        return {'display': 'none'}, [], 0
+
+    key_list = [d['Unique_key'] for d in current_table_data]
+    max_hits = 50
+
+    if len(key_list) > max_hits:
+        num_pages = math.ceil(len(key_list) / max_hits)
+        dropdown_options = []
+        for i in range(num_pages):
+            start_item = i * max_hits + 1
+            end_item = min((i + 1) * max_hits, len(key_list))
+            dropdown_options.append({'label': f'Hits {start_item} - {end_item}', 'value': i})
+
+        # Set the value to 0 if generating, otherwise try to keep the current value
+        ctx = dash.callback_context
+        trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        if trigger_id == 'generate':
+            chosen_value = 0
+        else:
+            # Ensure the current_dropdown_value is still a valid option
+            if current_dropdown_value in [opt['value'] for opt in dropdown_options]:
+                chosen_value = current_dropdown_value
+            else:
+                chosen_value = 0 # Default to first page if current value is invalid
+
+        return {'display': 'block'}, dropdown_options, chosen_value
+    else:
+        return {'display': 'none'}, [], 0
+
 # Generating or clearing graphs for all hits
 @app.callback(
     Output('all_graphs_div', 'children'),
@@ -872,19 +953,17 @@ def update_selected_row_color(active,n_clicks, table_data):
      Input('clear', 'n_clicks'),
      Input('summary_graphs', 'n_clicks'),
      Input('submit', 'n_clicks'),
-     Input('hits_dropdown', 'value')], 
-    [State('results_table_datatable', 'derived_virtual_data')]
+     Input('hits_dropdown', 'value')],  # This is now reliably present when visible
+    [State('current_table_data_store', 'data')] # Use the stored data
 )
 def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update_clicks, hit_choice, current_table_data):
-    ctx = callback_context
+    ctx = dash.callback_context
     if not ctx.triggered:
         raise PreventUpdate
 
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    
-    # Define a constant for page size
+
     max_hits = 50
-    current_page = hit_choice if hit_choice is not None else 0
 
     if trigger_id == 'generate' or trigger_id == 'hits_dropdown':
         if current_table_data is None:
@@ -893,48 +972,40 @@ def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update
         key_list = [d['Unique_key'] for d in current_table_data]
 
         if not key_list:
-            return None # Return nothing if there's no data
+            return None  # Return nothing if there's no data
 
         if len(key_list) > max_hits:
-            current_page = hit_choice if trigger_id == 'hits_dropdown' else 0
-            # Create options for the dropdown
-            num_pages = math.ceil(len(key_list) / max_hits)
-            dropdown_options = []
-            for i in range(num_pages):
-                start_item = i * max_hits + 1
-                end_item = min((i + 1) * max_hits, len(key_list))
-                dropdown_options.append({'label': f'Hits {start_item} - {end_item}', 'value': i})
-
-            # Create the dropdown component
-            hits_choices_dropdown = html.Div([
-                html.Label('Select hit range:'.format(len(key_list))),
-                dcc.Dropdown(
-                    id='hits_dropdown',
-                    options=dropdown_options,
-                    value=current_page,
-                    clearable=False,
-                    style={'width': '150px', 'margin-top': '5px','fontSize':12}
-                )
-            ], style={'font-family': 'Arial', 'margin-bottom': '5px'})
-
-            # Slice the list to get keys for the current page
+            current_page = hit_choice if hit_choice is not None else 0 # Use the value from the dropdown
             start_index = current_page * max_hits
             end_index = start_index + max_hits
             paginated_key_list = key_list[start_index:end_index]
 
-            # Generate the figure for the current page
             new_figure = generate_all_curves(paginated_key_list)
             new_figure.update_yaxes(matches=None)
             new_figure.for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True))
-            # Adjust height based on the number of items on the current page
             new_figure.update_layout(height=200 * len(paginated_key_list) / 5)
-            
-            graph_object = dcc.Graph(id='all_graphs_object', figure=new_figure, style={'font-family': 'Arial'})
-            
-            # Return the dropdown AND the graph
-            return [hits_choices_dropdown, graph_object]
 
-        # --- ORIGINAL LOGIC (for less than 50 hits) ---
+            graph_object = dcc.Graph(id='all_graphs_object', figure=new_figure, style={'font-family': 'Arial'})
+
+            # The dropdown is now managed by a separate callback, so we just return the graph
+            return graph_object
+
+        elif len(key_list) < 6:
+            new_figure = generate_all_curves(key_list)
+            new_figure.update_yaxes(matches=None)
+            new_figure.for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True))
+            new_figure.update_layout(height=250)
+            graph_object = dcc.Graph(id='all_graphs_object', figure=new_figure, style={'font-family': 'Arial'})
+            return graph_object
+
+        elif len(key_list) < 10:
+            new_figure = generate_all_curves(key_list)
+            new_figure.update_yaxes(matches=None)
+            new_figure.for_each_yaxis(lambda yaxis: yaxis.update(showticklabels=True))
+            new_figure.update_layout(height=400)
+            graph_object = dcc.Graph(id='all_graphs_object', figure=new_figure, style={'font-family': 'Arial'})
+            return graph_object
+
         else:
             new_figure = generate_all_curves(key_list)
             new_figure.update_yaxes(matches=None)
@@ -958,7 +1029,7 @@ def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update
             Hit_distribution_figure = None
             Hits_per_plate_figure = None
             Hits_per_fraction_figure = None
-        
+
         graph_Div = html.Div([
             html.Hr(style={'margin-bottom':'0px','width': '100%', 'margin-top':'10px'}),
             html.Div([
@@ -976,17 +1047,17 @@ def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update
             ], id='hit_plots_div3', style={'display':'inline-block','vertical-align':'top', 'width': '50%'})
         ])
         return graph_Div
-        
+
     elif trigger_id == 'clear':
         if (clear_clicks is not None):
             return None
-            
+
     elif trigger_id == 'submit':
         if update_clicks is not None:
             return None
-            
+
     raise PreventUpdate
 
 # Run the app
 if __name__ == '__main__':
-    app.run(host ='0.0.0.0',port = args.port, debug=False)
+    app.run(host ='0.0.0.0',port = args.port, debug=True)
