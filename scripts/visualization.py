@@ -256,8 +256,8 @@ def generate_barplot(df,x_axis, color_by):
     figure.update_layout(margin=dict(l=20, r=20, t=5, b=5), height=350) #Reduce enormous default margins
     return figure
 
-def generate_scatterplot():
-    figure = px.strip(df_results, x = 'Platename',y = 'Final_Tm', color = 'Hit', color_discrete_sequence=[color2,color3,color4],
+def generate_scatterplot(hits_df):
+    figure = px.strip(hits_df, x = 'Platename',y = 'Final_Tm', color = 'Hit', color_discrete_sequence=[color2,color3,color4],
                       labels={'Final_Tm': 'Melting temp', 'Platename': 'Plate'},
                       hover_data={'Well':True, 'Well_zscore':True, 'Relative_amplitude':True,'Avg_ctrl_melting_temp':True,'Diff from ctrl avg':True, 'Std. devs from ctrl mean':True,'Max_ctrl_zscore_for_plate':True,'Min_ctrl_zscore_for_plate':True})
     figure.update_xaxes(tickfont=dict(size=8), tickangle=90)
@@ -954,9 +954,10 @@ def manage_hits_dropdown(current_table_data, update_clicks, clear_clicks, summar
      Input('summary_graphs', 'n_clicks'),
      Input('submit', 'n_clicks'),
      Input('hits_dropdown', 'value')],  # This is now reliably present when visible
-    [State('current_table_data_store', 'data')] # Use the stored data
+    [State('current_table_data_store', 'data'),
+    State('results_table_datatable', 'derived_virtual_data')] # Use the stored data
 )
-def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update_clicks, hit_choice, current_table_data):
+def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update_clicks, hit_choice, current_table_data,hit_data):
     ctx = dash.callback_context
     if not ctx.triggered:
         raise PreventUpdate
@@ -969,7 +970,7 @@ def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update
         if current_table_data is None:
             raise PreventUpdate
 
-        key_list = [d['Unique_key'] for d in current_table_data]
+        key_list = [d['Unique_key'] for d in hit_data]
 
         if not key_list:
             return None  # Return nothing if there's no data
@@ -1015,14 +1016,14 @@ def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update
             return graph_object
 
     elif trigger_id == 'summary_graphs':
-        if (summary_clicks is not None) and (current_table_data is not None):
-            hits_key_list = [d['Unique_key_subplot'] for d in current_table_data]
+        if (summary_clicks is not None) and (hit_data is not None):
+            hits_key_list = [d['Unique_key_subplot'] for d in hit_data]
             df_results.loc[:, 'Hit'] = np.where(df_results['Unique_key_subplot'].isin(hits_key_list), 'Hit', 'Not a hit')
             df_results.loc[:, 'Hit'] = np.where(df_results['Well_type'] == 'Control', "Control", df_results['Hit'])
             df_hits_raw = df_results[df_results['Hit'] == 'Hit']
             df_hits_sub = df_hits_raw.loc[:, ['Platename','Fraction','Well','Hit']]
             df_hits = df_hits_sub.drop_duplicates()
-            Hit_distribution_figure = generate_scatterplot()
+            Hit_distribution_figure = generate_scatterplot(df_results)
             Hits_per_plate_figure = generate_barplot(df_hits,'Platename', 'Fraction')
             Hits_per_fraction_figure = generate_barplot(df_hits, 'Fraction', 'Platename')
         else:
