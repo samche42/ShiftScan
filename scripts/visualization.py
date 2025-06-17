@@ -257,7 +257,10 @@ def generate_barplot(df,x_axis, color_by):
     return figure
 
 def generate_scatterplot(hits_df):
-    figure = px.strip(hits_df, x = 'Platename',y = 'Final_Tm', color = 'Hit', color_discrete_sequence=[color2,color3,color4],
+    category_order = ['Control', 'Hit', 'Not a hit']
+    hits_df['Hit'] = pd.Categorical(hits_df['Hit'], categories=category_order, ordered=True)
+    figure = px.strip(hits_df, x = 'Platename',y = 'Final_Tm', color = 'Hit', color_discrete_map={'Control':color2,'Not a hit':color3,'Hit':color4},
+                      category_orders={'Hit': category_order},
                       labels={'Final_Tm': 'Melting temp', 'Platename': 'Plate'},
                       hover_data={'Well':True, 'Well_zscore':True, 'Relative_amplitude':True,'Avg_ctrl_melting_temp':True,'Diff from ctrl avg':True, 'Std. devs from ctrl mean':True,'Max_ctrl_zscore_for_plate':True,'Min_ctrl_zscore_for_plate':True})
     figure.update_xaxes(tickfont=dict(size=8), tickangle=90)
@@ -1061,4 +1064,4 @@ def update_or_clear_graphs(generate_clicks, clear_clicks, summary_clicks, update
 
 # Run the app
 if __name__ == '__main__':
-    app.run(host ='0.0.0.0',port = args.port, debug=True)
+    app.run(host ='0.0.0.0',port = args.port, debug=False)
