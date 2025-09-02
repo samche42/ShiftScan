@@ -195,3 +195,27 @@ Press CTRL+C to quit
 ```
 
 Copy and paste the address (e.g. ```http://127.0.0.1:8050/```) into your web browser. 
+
+___
+
+### Citation
+
+If you use ShiftScan in your research, please cite:
+
+**Plain text:**
+
+Waterworth, S. C., Shenoy, S. R., Sharma, N. D., Wolcott, C., Donohue, D. E., O'Keefe, B. R., & Beutler, J. A. (2025). ShiftScan: A tool for rapid analysis of high-throughput differential scanning fluorimetry data and compound prioritization. Protein Science, 34(3), e70055. [https://doi.org/10.1002/pro.70055](https://doi.org/10.1002/pro.70055)
+
+**For Reference Managers (BibTeX):**
+```bibtex
+@article{Waterworth2025ShiftScan,
+  title   = {ShiftScan: A tool for rapid analysis of high-throughput differential scanning fluorimetry data and compound prioritization},
+  author  = {Waterworth, Samantha C. and Shenoy, Shilpa R. and Sharma, Nirmala D. and Wolcott, Chris and Donohue, Duncan E. and O'Keefe, Barry R. and Beutler, John A.},
+  journal = {Protein Science},
+  volume  = {34},
+  number  = {3},
+  pages   = {e70055},
+  year    = {2025},
+  doi     = {10.1002/pro.70055},
+  url     = {https://onlinelibrary.wiley.com/doi/abs/10.1002/pro.70055}
+}
