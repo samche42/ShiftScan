@@ -55,13 +55,13 @@ ___
 
 6. You can test that everything works by running: 
 
-```python3 multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```.
+```python3 shiftscan.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```.
 
 At first, it will seem like nothing is happening, but after about 10 seconds, several messages detailing the pipeline steps will show up.
 
 7. Once the analysis is complete, you can test the visualization tool with:
  
-```python3 visualization.py -i example_output/```.
+```python3 shiftscan_viewer.py -i example_output/```.
 
 8. Navigate to the address that the Dash is running on (e.g. http://127.0.0.1:8050/) and you can play around and get familiar with the visualizations.
 
@@ -80,7 +80,7 @@ ___
 
 3. Run ShiftScan using the locations of your input files as input, e.g.:
 
-```python3 multiprocess_main.py -i complete/path/to/your/own/data -m complete/path/to/your/metdata/file/metdata.txt -o complete/path/to/wherever/you/want/to/store/output```
+```python3 shiftscan.py -i complete/path/to/your/own/data -m complete/path/to/your/metdata/file/metdata.txt -o complete/path/to/wherever/you/want/to/store/output```
 
 4. Similarly, when it's finished running, you run the visualization (from the ShiftScan/scripts folder) by running:
-```python3 visualization.py -i /path/to/wherever/you/put/the/output```
+```python3 shiftscan_viewer.py -i /path/to/wherever/you/put/the/output```
