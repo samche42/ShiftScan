@@ -61,7 +61,7 @@ ___
 
 5. Activate the environment using ```conda activate shiftscan```
 
-6. Test that the script is working with ```python multiprocessor_main.py -i example_input -m example_metadata/metadata.txt -o example_output```
+6. Test that the script is working with ```python shiftscan.py -i example_input -m example_metadata/metadata.txt -o example_output```
 
 > [!IMPORTANT]
 > The first time you run ShiftScan it may take a long time and appear to hang. It is running and everything is fine, promise! The first time it's run on a new system, it creates a ```__pycache__``` folder, where it stores all it's important imports and ensures rapid runs for every subsequent usage. 
@@ -75,9 +75,9 @@ Any time that you want to run ShiftScan, you'll have to:
 
 2. Navigate into the ShiftScan/scripts folder (unless you added this folder to your PATH)
 
-3. Run the program pointing to your data: e.g. ```python multiprocessor_main.py -i /path/to/my/input/data -m path/to/my/metdata.txt -o path/to/wherever/you/want/to/store/output```
+3. Run the program pointing to your data: e.g. ```python shiftscan.py -i /path/to/my/input/data -m path/to/my/metdata.txt -o path/to/wherever/you/want/to/store/output```
 
-4. To run the visualization tool: ```python visualization.py -i path/to/wherever/you/stored/the/output```
+4. To run the visualization tool: ```python shiftscan_viewer.py -i path/to/wherever/you/stored/the/output```
 
 > [!NOTE]
 > If the provided address (http://0.0.0.0:8050) does not work. Please try entering ```http://localhost:8050``` instead.
