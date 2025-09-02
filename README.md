@@ -53,10 +53,10 @@ Metadata must be stored in the following format (Do NOT include control wells in
 | RBD_040323_02  | Collection2  | G19  | compound_z  | 0        |
 | RBD_040323_02  | Collection2  | G20  | compound_q  | 1        |
 
- - The 'ASSAY_PLATE' values **MUST** match the names of your raw data files. E.g. One of the input data files was called "RBD_040323_01.txt"
+ - The 'ASSAY_PLATE' values **MUST** match the names of your raw data files. E.g., one of the input data files was called "RBD_040323_01.txt"
  - The 'SOURCE_PLATE' should be the name of the collection your samples originated from.
  - Do not include control wells in the metadata.
- - If your compounds are pure (I.e. not fractions), leave the 'FRACTION' column as zeros all the way down. 
+ - If your compounds are pure (I.e., not fractions), leave the 'FRACTION' column as zeros all the way down. 
 
 ___
 
@@ -64,7 +64,7 @@ ___
 
 By default, ShiftScan assumes that the control wells are in columns 1 & 2. This can be changed in one of two ways:
 
-**Option 1:** If the controls are in different columns e.g. first and last, then you can provide a comma-delimiedt list of the control columns using the -c flag. I.e. ```-c 1,24```.
+**Option 1:** If the controls are in different columns e.g., first and last, then you can provide a comma-delimited list of the control columns using the -c flag. I.e. ```-c 1,24```.
 
 **Option 2:** You may alternatively opt to provide a tab-delimited file that assigns a "type" to each well. I.e. ```-c /path/to/wherver/you/stored/the/well_mapping.txt```
 
