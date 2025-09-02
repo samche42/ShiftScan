@@ -1,10 +1,12 @@
-# ShiftScan
+# ShiftScan v.2.0.0
 Analysis and visualization of high-throughput DSF data
+ 
+Version 2 includes a complete refactoring of the code to allow better modularity for the addition of new "modes", and now comes with a dose response mode!
 
 ## Usage Instructions
-ShiftScan is designed for high-performance analysis of DSF data. It offers multiple ways to interact with the software (command line, Google Colab, or an app) depending on your familiarity with command-line tools and your performance expectations.
+ShiftScan is designed for high-performance analysis of DSF data. It offers multiple ways to interact with the software (command line, Google Colab, or an app), depending on your familiarity with command-line tools and your performance expectations.
 
-Input data (raw and metadata) need to follow specific data formats. Please see below for how to appropriately format input.
+Input data (raw and metadata) needs to follow specific data formats. Please see below for how to appropriately format input.
 
 ___
 
@@ -20,7 +22,7 @@ ___
 
 ### B. ShiftScan Colab option
 
-Commandline usage is made user-friendly and easy via Google Colab. The link to the Colab notebook [is here](https://colab.research.google.com/drive/1ShHOWqqwMoYdsmMajNAvnpBKyKsDl5AG?usp=sharing). Please follow [this video](https://youtu.be/0s_StsQqHoA) for instructions on making a copy and using it to analyze your data.
+Command-line usage is made user-friendly and easy via Google Colab. The link to the Colab notebook [is here](https://colab.research.google.com/drive/1ShHOWqqwMoYdsmMajNAvnpBKyKsDl5AG?usp=sharing). Please follow [this video](https://youtu.be/0s_StsQqHoA) for instructions on making a copy and using it to analyze your data.
 
 ___
 
@@ -90,7 +92,7 @@ ___
 
 Navigate to where ShiftScan was installed (unless you've added it to your PATH). The analysis pipeline can be run with :
 
-**Command:** ```python multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```.
+**Command:** ```python shiftscan.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```.
 
 where the parameters are:
 
@@ -101,9 +103,9 @@ where the parameters are:
 > [!NOTE]
 > If you only want the Tm values estimated and no further comparison or analysis, you can add the ```--only_tm``` flag, which will stop the pipeline early and generate a single output file with The estimated Tm value per sigmoidal region detected. This output will **not** work with the default companion tool (See later for details for visualization). Example code to use:
 > 
-> **Command:** ```python multiprocessor_main.py -i example_input/ -m example_metadata/metadata.txt -o example_output/ --only_tm```
+> **Command:** ```python shiftscan.py -i example_input/ -m example_metadata/metadata.txt -o example_output/ --only_tm```
 
-Additionally, there are some additional parameters you can provide if you would like to tweak how the data is processed
+Additionally, there are some further parameters you can adjust if you would like to tweak how the data is processed
 
 - ```-c``` A comma-delimited list of which columns contain your controls (Default:  "1,2")
 - ```-f``` Instrument used to generate raw output (default = 'RocheLightCycler'). Example data can be found in the input_example_data folder in this repo. Options currently include:
@@ -118,7 +120,6 @@ Additionally, there are some additional parameters you can provide if you would 
 - ```-l``` The minimum relative amplitude of experimental wells allowed (relative to control average) (Default: 0.2)
 - ```-s``` The desired smoothing factor for smoothing of raw data (default = 0.0005)
 - ```-n``` Whether the input data should be normalized per plate. Input options are "y" or "n". (Default: y)
-- ```--only_tm``` Flag to enable only Tm calling mode
 
 **Note: You can use the ```-h``` flag to list these options in the command line.
 
@@ -136,31 +137,50 @@ Once complete, 4 files would have been generated in the specified output directo
 ___
 
 ### Running the analysis (Disk-intensive mode)
-If you are limited by available RAM but still need to run hundreds of plates, you may opt to use the disk-intensive mode of ShiftScan. 
+If you are limited by available RAM but still need to run hundreds of plates, you may opt to use the disk-intensive mode of ShiftScan: 
 
-The analysis pipeline is largely identical to the RAM-intensive mode in terms of usage, all you have to do is change the name of the script:
+**Command:** ```python shiftscan.py -i example_input/ -m example_metadata/metadata.txt -o example_output/ --disk```
 
-**Command:** ```python multiprocessor_main_platewise.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```
-
-All available parameters and the option to use the ```--only_tm flag``` are the same as in the RAM-intensive mode. Note that the disk-intensive mode will be slower than the RAM-intensive mode. 
+All available parameters are the same as in the RAM-intensive mode. Note that the disk-intensive mode will be slower than the RAM-intensive mode. 
 
 ___
+
+### Dose-response mode
+Use this if you have tested your compound(s) at a variety of different concentrations. The metadata format will need to look like this:
+
+| ASSAY_PLATE | SOURCE_PLATE | WELL | COMPOUND | FRACTION | REPLICATE | CONCENTRATION |
+|---|---|---|---|---|---|---|
+| DR_assay_plate | DR_source_plate | A1 | Compound1 | 0 | 1 | 981 |
+| DR_assay_plate | DR_source_plate | A2 | Compound1 | 0 | 1 | 491 |
+| DR_assay_plate | DR_source_plate | A3 | Compound1 | 0 | 1 | 245 |
+| ... | ... |... | ... | ... | ... | ... |
+| DR_assay_plate | DR_source_plate | P22 | Compound1 | 0 | 1 | 3.83 |
+| DR_assay_plate | DR_source_plate | P23 | Compound1 | 0 | 1 | 1.92 |
+| DR_assay_plate | DR_source_plate | P24 | Compound1 | 0 | 1 | 0.96 |
+
+For a complete example please see the example file [here](https://github.com/samche42/ShiftScan/blob/main/scripts/Dose_response_example_data/DR_raw_input_data)
+___
+
 ### Visualization
 
 This step is optional. The visualization script should be run using the ```-i``` parameter to point to the directory with the four files generated from the previous step. The script is run with:
 
-```python3 visualization.py -i path/to/output/from/previous/step```
+```python3 shiftscan_viewer.py -i path/to/output/from/previous/step```
 
 e.g.
 
-**Command:** ```python visualization.py -i example_output/```.
+**Command:** ```python shiftscan_viewer.py -i example_output/```.
 
 > [!IMPORTANT]
-> If you have opted to use the ```--only_tm``` flag, you cannot use the default visualization tool. Instead, you must run:
+> If you have opted to use the ```--only_tm``` flag, to visualize the results you must run:
 >
-> **Command:** ```python visualization_only_tm.py -i example_output/ ```
+> **Command:** ```python shiftscan_viewer.py -i example_output/ --mode only_tm```
+>
+> If you have a dose response analysis, to visualize the results, please run
+>
+> **Command:** ```python shiftscan_viewer.py -i example_output/ --mode dose_response```
 
-In either case, a local Dash server will be fired up, with a message like so:
+A local Dash server will be fired up, with a message like so:
 
 ```
 Dash is running on http://0.0.0.0:8050/
@@ -175,3 +195,27 @@ Press CTRL+C to quit
 ```
 
 Copy and paste the address (e.g. ```http://127.0.0.1:8050/```) into your web browser. 
+
+___
+
+### Citation
+
+If you use ShiftScan in your research, please cite:
+
+**Plain text:**
+
+Waterworth, S. C., Shenoy, S. R., Sharma, N. D., Wolcott, C., Donohue, D. E., O'Keefe, B. R., & Beutler, J. A. (2025). ShiftScan: A tool for rapid analysis of high-throughput differential scanning fluorimetry data and compound prioritization. Protein Science, 34(3), e70055. [https://doi.org/10.1002/pro.70055](https://doi.org/10.1002/pro.70055)
+
+**For Reference Managers (BibTeX):**
+```bibtex
+@article{Waterworth2025ShiftScan,
+  title   = {ShiftScan: A tool for rapid analysis of high-throughput differential scanning fluorimetry data and compound prioritization},
+  author  = {Waterworth, Samantha C. and Shenoy, Shilpa R. and Sharma, Nirmala D. and Wolcott, Chris and Donohue, Duncan E. and O'Keefe, Barry R. and Beutler, John A.},
+  journal = {Protein Science},
+  volume  = {34},
+  number  = {3},
+  pages   = {e70055},
+  year    = {2025},
+  doi     = {10.1002/pro.70055},
+  url     = {https://onlinelibrary.wiley.com/doi/abs/10.1002/pro.70055}
+}
