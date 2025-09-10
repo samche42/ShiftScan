@@ -13,6 +13,7 @@ from scipy import stats
 from scipy.optimize import curve_fit
 from DSF_functions import boltzmann_sigmoid, find_inflection
 
+#color1 = '#B4EDD2'
 color1 = '#B4EDD2'
 color1_faded = '#e0fff1'
 color2 = '#A0CFD3'
