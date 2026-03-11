@@ -112,7 +112,7 @@ Additionally, there are some further parameters you can adjust if you would like
   - ```RocheLightCycler```
   - ```BioRadOpticonMonitor```
   - ```ThermoQuant```
-- ```-d``` Separator character in raw data input file (default = "tab" i.e. tab-delimited, choices are 'tab','comma','semicolon')
+- ```-d``` Separator character in raw data input file (default = "tab" i.e. tab-delimited, choices are ```'tab','comma','semicolon'```)
 - ```-p``` The number of processors you wish to use (Default: 4)
 - ```-x``` The maximum number of control wells allowed to fail per plate. E.g. At default, if 9 control wells fail, the plate is failed. (Default: 8)
 - ```-t``` The maximum z-score of control melting temperatures tolerated. I.e. At default, if the z-score of a control well melting temp is 1.6 the well is failed. (Default: 1.5)
