@@ -4,7 +4,7 @@ import argparse, sys, os, gc
 from pathlib import Path
 import pandas as pd
 import numpy as np
-from DSF_functions import (read_default_metadata, roche_import, biorad_import,roche_import_platewise, biorad_import_platewise,concatenate_files,default_analysis)
+from DSF_functions import (read_default_metadata, roche_import, biorad_import,roche_import_platewise, biorad_import_platewise, quant_import, quant_import_platewise, concatenate_files, default_analysis)
 
 
 if __name__ == '__main__':
@@ -13,8 +13,8 @@ if __name__ == '__main__':
     parser.add_argument("-m", "--metadata", required=True, help="Full file path to metadata file")
     parser.add_argument("-o", "--output_dir", required=True, help="Full path to desired output directory")
     parser.add_argument("-p", "--processors", type=int, default=4, help="No. of processors you want to use")
-    parser.add_argument("-f", "--file_origin", choices=['RocheLightCycler', 'BioRadOpticonMonitor'], default='RocheLightCycler', help="Instrument used to generate raw output.")
-    parser.add_argument("-d", "--delimiter", default="\t", help="Separator character in raw data input file")
+    parser.add_argument("-f", "--file_origin", choices=['RocheLightCycler', 'BioRadOpticonMonitor','ThermoQuant'], default='RocheLightCycler', help="Instrument used to generate raw output.")
+    parser.add_argument("-d", "--delimiter", choices=['tab','comma','semicolon'], default="tab", help="Separator character in raw data input file")
     parser.add_argument("-c", "--control_cols", default="1,2", help="The column numbers of your controls (comma-separated) or path to a well mapping file.")
     parser.add_argument("-s", "--smoothing_factor", type=float, default=0.0005, help="Desired smoothing factor")
     parser.add_argument("-n", "--normalization", choices=['y', 'n'], default="y", help="Should data be normalized (y/n)")
@@ -34,14 +34,24 @@ if __name__ == '__main__':
     output_dir.mkdir(parents=True, exist_ok=True)
     print(f"Output will be saved to: {output_dir.resolve()}")
 
+    if args.delimiter == "tab":
+        delimiter = "\t"
+    elif args.delimiter == "comma":
+        delimiter = ","
+    elif args.delimiter == "semicolon":
+        delimiter = ";"
+    else:
+        print(f"Specified delimiter not among choices. Please revise.")
+        sys.exit()
+
     #Read in metadata
     dose_response = ("yes" if args.dose_response else "no")
-    map_raw_df = read_default_metadata(args.metadata, args.delimiter, dose_response)
+    map_raw_df = read_default_metadata(args.metadata, delimiter, dose_response)
 
     # Define a dictionary of parameters to pass to the analysis function
     analysis_params = {
         'control_cols': args.control_cols,
-        'delimiter': args.delimiter,
+        'delimiter': delimiter,
         'normalization': args.normalization,
         'smoothing_factor': args.smoothing_factor,
         'processors': args.processors,
@@ -65,10 +75,14 @@ if __name__ == '__main__':
             print(f"Processing Plate {i+1}/{len(plates)}: {plate_file.name}")
             
             if args.file_origin == 'RocheLightCycler':
-                semifinal_df = roche_import_platewise(plate_file, args.delimiter)
+                semifinal_df = roche_import_platewise(plate_file, delimiter)
+            elif args.file_origin == 'BioRadOpticonMonitor':
+                semifinal_df = biorad_import_platewise(plate_file, delimiter)
+            elif args.file_origin == 'ThermoQuant':
+                semifinal_df = quant_import_platewise(plate_file, delimiter)
             else:
-                semifinal_df = biorad_import_platewise(plate_file, args.delimiter)
-
+                print(f"Incorrect file origin {args.file_origin} supplied. Options are 'RocheLightCycler', 'BioRadOpticonMonitor','ThermoQuant' ")
+                sys.exit()
 
             tmp_map = map_raw_df[['Assay_Plate', 'Source_Plate']].drop_duplicates()
             semifinal_df2 = pd.merge(semifinal_df, tmp_map, on='Assay_Plate', how='inner')
@@ -140,9 +154,14 @@ if __name__ == '__main__':
             
         print(f"Importing data from {len(files)} files...")
         if args.file_origin == 'RocheLightCycler':
-            semifinal_df = roche_import(files, args.delimiter)
+            semifinal_df = roche_import(files, delimiter)
+        elif args.file_origin == 'BioRadOpticonMonitor':
+            semifinal_df = biorad_import(files, delimiter)
+        elif args.file_origin == 'ThermoQuant':
+            semifinal_df = quant_import(files, delimiter)
         else:
-            semifinal_df = biorad_import(files, args.delimiter)
+            print(f"Incorrect file origin {args.file_origin} supplied. Options are 'RocheLightCycler', 'BioRadOpticonMonitor','ThermoQuant' ")
+            sys.exit()
 
         tmp_map = map_raw_df[['Assay_Plate', 'Source_Plate']].drop_duplicates()
         semifinal_df2 = pd.merge(semifinal_df, tmp_map, on='Assay_Plate', how='inner')

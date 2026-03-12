@@ -19,9 +19,11 @@ def read_default_metadata(metadata_file, delimiter,dr_choice):
             map_raw_df = map_raw_df.rename(columns={'ASSAY_PLATE': 'Assay_Plate', 'SOURCE_PLATE': 'Source_Plate', 'WELL': 'Well', 'COMPOUND': 'Compound', 'FRACTION': 'Fraction', 'REPLICATE':'Replicate','CONCENTRATION':'Concentration'})
         else:
             map_raw_df = map_raw_df.rename(columns={'ASSAY_PLATE': 'Assay_Plate', 'SOURCE_PLATE': 'Source_Plate', 'WELL': 'Well', 'COMPOUND': 'Compound', 'FRACTION': 'Fraction'})
+        print(map_raw_df)
         map_raw_df['Row'] = map_raw_df['Well'].str[0]
         map_raw_df['Column'] = map_raw_df['Well'].str[1:].str.replace(r'^(0+)', '', regex=True)
-        map_raw_df['Unique_key'] = map_raw_df['Assay_Plate'] + '_' + map_raw_df['Row'] + map_raw_df['Column']
+        map_raw_df['Well'] =  map_raw_df['Row'] + map_raw_df['Column'].astype(str) #Remove padding zeros from well
+        map_raw_df['Unique_key'] = map_raw_df['Assay_Plate'] + '_' + map_raw_df['Well']
         map_raw_df['Column'] = map_raw_df['Column'].astype(int)
         map_raw_df.Fraction = map_raw_df.Fraction.fillna('NA')
         print("Metadata successfully loaded.")
@@ -53,13 +55,14 @@ def roche_import(file_list,delim):
         parsed_df = parsed_df.drop(columns=[col for col in parsed_df.columns if 'X (' in col])
         melted_df = pd.melt(parsed_df,id_vars=['Temp','Origin']) #Melt dataframe
         melted_df['Well'] = melted_df.variable.str.split(':', expand=True)[0] #create well column
-        melted_df  = melted_df.rename(columns={'value': 'Fluorescence'}) #Rename columns
+        melted_df = melted_df.rename(columns={'value': 'Fluorescence'}) #Rename columns
         melted_df['Assay_Plate'] = melted_df.Origin.str.split('.', expand=True)[0] #Create plate column from origin data
         melted_df['Row'] = melted_df['Well'].str[0] #Take first character from Well string and make it Row value 
         melted_df['Column'] = melted_df['Well'].str[1:]
         melted_df = melted_df.astype({'Column':'int'})
+        melted_df['Well'] = melted_df['Row'] + melted_df['Column'].astype(str)
         semifinal_df = melted_df.drop(['Origin','variable'],axis = 1) #Get rid of useless/redundant columns
-        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate']+'_'+semifinal_df['Well'] #Add in new column with generated unique key
+        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate'] + '_' + semifinal_df['Well'] #Add in new column with generated unique key
     except Exception as e: 
         print("There was an issue parsing concatenated data. Please confirm input data format is correct. Error: ", e) 
         sys.exit()
@@ -81,13 +84,14 @@ def roche_import_platewise(file,delim):
         parsed_df = parsed_df.drop(columns=[col for col in parsed_df.columns if 'X (' in col])
         melted_df = pd.melt(parsed_df,id_vars=['Temp','Origin']) #Melt dataframe
         melted_df['Well'] = melted_df.variable.str.split(':', expand=True)[0] #create well column
-        melted_df  = melted_df.rename(columns={'value': 'Fluorescence'}) #Rename columns
+        melted_df = melted_df.rename(columns={'value': 'Fluorescence'}) #Rename columns
         melted_df['Assay_Plate'] = melted_df.Origin.str.split('.', expand=True)[0] #Create plate column from origin data
         melted_df['Row'] = melted_df['Well'].str[0] #Take first character from Well string and make it Row value 
         melted_df['Column'] = melted_df['Well'].str[1:]
         melted_df = melted_df.astype({'Column':'int'})
+        melted_df['Well'] = melted_df['Row'] + melted_df['Column'].astype(str)
         semifinal_df = melted_df.drop(['Origin','variable'],axis = 1) #Get rid of useless/redundant columns
-        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate']+'_'+semifinal_df['Well'] #Add in new column with generated unique key
+        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate'] + '_' + semifinal_df['Well']  #Add in new column with generated unique key
     except Exception as e: 
         print("There was an issue parsing concatenated data. Please confirm input data format is correct. Error: ", e) 
         sys.exit()
@@ -118,8 +122,9 @@ def biorad_import(file_list,delim):
         melted_df['Row'] = melted_df['Well'].str[0] #Take first character from Well string and make it Row value 
         melted_df['Column'] = melted_df['Well'].str[1:]
         melted_df = melted_df.astype({'Column':'int'})
+        melted_df['Well'] = melted_df['Row'] + melted_df['Column'].astype(str)
         semifinal_df = melted_df.drop(['Origin'],axis = 1) #Get rid of useless/redundant columns
-        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate']+'_'+semifinal_df['Well'] #Add in new column with generated unique key
+        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate'] + '_' + semifinal_df['Well']#Add in new column with generated unique key
     except Exception as e: 
         print("There was an issue parsing concatenated data. Please confirm input data format is correct. Error: ", e) 
         sys.exit()
@@ -131,12 +136,11 @@ def biorad_import_platewise(file,delim):
         data = data.drop(['Step','Cycle','Dye'],axis = 1) #Drop the first 3 columns (Step, Cycle, Dye)
         data['Origin of data'] = file.stem # Get filename without extension and add as new column
         data = data.dropna(subset=['Temp.'])
-        dfs.append(data)
     except Exception as e:
         print(f"There was a problem concatenating file: {file}. Please confirm the file is tab-delimited and has correct headers. Error: {e}")
         sys.exit()
     try:
-        raw_input_df = pd.concat(dfs, ignore_index=True)#Smush them all together
+        raw_input_df = data
         raw_input_df  = raw_input_df.rename(columns={'Temp.': 'Temp', 'Origin of data':'Origin'}) #Rename temp column
         melted_df = pd.melt(raw_input_df,id_vars=['Temp','Origin']) #Melt dataframe
         melted_df = melted_df.rename(columns={'variable': 'Well','value': 'Fluorescence'})
@@ -144,9 +148,61 @@ def biorad_import_platewise(file,delim):
         melted_df['Row'] = melted_df['Well'].str[0] #Take first character from Well string and make it Row value 
         melted_df['Column'] = melted_df['Well'].str[1:]
         melted_df = melted_df.astype({'Column':'int'})
+        melted_df['Well'] = melted_df['Row'] + melted_df['Column'].astype(str)
         semifinal_df = melted_df.drop(['Origin'],axis = 1) #Get rid of useless/redundant columns
-        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate']+'_'+semifinal_df['Well'] #Add in new column with generated unique key
+        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate'] + '_' + semifinal_df['Well'] #Add in new column with generated unique key
     except Exception as e: 
+        print("There was an issue parsing concatenated data. Please confirm input data format is correct. Error: ", e) 
+        sys.exit()
+    return semifinal_df
+
+def quant_import(file_list,delim):
+    if file_list: # Check if there are any files in the specified input folder
+        dfs = []  # Initialize list of all files (converted to DataFrames)
+        for file in file_list:
+            try:
+                data = pd.read_csv(file, sep=delim, comment='#', header=0, usecols=['Well Position','Temperature','Fluorescence']) #Skip metadata rows and only import columns of interest
+                data = data.rename(columns={'Temperature': 'Temp', 'Well Position':'Well'})
+                data['Origin'] = file.stem
+                dfs.append(data)
+            except Exception as e:
+                print(f"There was a problem concatenating file: {file}. Please confirm the correct delimiter has been designated and has correct headers. Error: {e}")
+                sys.exit()
+    else:
+        print("No .txt or .csv files found in specified input folder.")
+        sys.exit()
+    try:
+        melted_df = pd.concat(dfs, ignore_index=True)#Smush them all together
+        melted_df['Assay_Plate'] = melted_df.Origin.str.split('.', expand=True)[0] #Create plate column from origin data
+        melted_df['Row'] = melted_df['Well'].str[0] #Take first character from Well string and make it Row value 
+        melted_df['Column'] = melted_df['Well'].str[1:]
+        melted_df = melted_df.astype({'Column':'int'})
+        melted_df['Well'] = melted_df['Row'] + melted_df['Column'].astype(str)
+        semifinal_df = melted_df.drop(['Origin'],axis = 1) #Get rid of useless/redundant columns
+        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate'] + '_' + semifinal_df['Well'] #Add in new column with generated unique key
+    except Exception as e: 
+        print("There was an issue parsing concatenated data. Please confirm input data format is correct. Error: ", e) 
+        sys.exit()
+    return semifinal_df
+
+def quant_import_platewise(file,delim):
+    try:
+        data = pd.read_csv(file, sep=delim, comment='#', header=0, usecols=['Well Position','Temperature','Fluorescence']) #Skip metadata rows and only import columns of interest
+        data = data.rename(columns={'Temperature': 'Temp', 'Well Position':'Well'})
+        data['Origin'] = file.stem
+    except Exception as e:
+        print(f"There was a problem concatenating file: {file}. Please confirm the file is tab-delimited and has correct headers. Error: {e}")
+        sys.exit()
+    try:
+        melted_df = data
+        melted_df['Assay_Plate'] = melted_df.Origin.str.split('.', expand=True)[0] #Create plate column from origin data
+        melted_df['Row'] = melted_df['Well'].str[0] #Take first character from Well string and make it Row value 
+        melted_df['Column'] = melted_df['Well'].str[1:]
+        melted_df = melted_df.astype({'Column':'int'})
+        melted_df['Well'] = melted_df['Row'] + melted_df['Column'].astype(str)
+        semifinal_df = melted_df.drop(['Origin'],axis = 1) #Get rid of useless/redundant columns
+        semifinal_df['Unique_key'] = semifinal_df['Assay_Plate'] + '_' + semifinal_df['Well'] #Add in new column with generated unique key
+    except Exception as e:
         print("There was an issue parsing concatenated data. Please confirm input data format is correct. Error: ", e) 
         sys.exit()
     return semifinal_df
@@ -380,7 +436,7 @@ def process_well(sub_df,smoothing_factor,normalize):
 def default_analysis(final_df,control_cols,delimiter,normalization,smoothing_factor,processors,only_tm,dose_response,failed_control_wells,ctrl_tm_cutoff,ctrl_amp_cutoff,min_amp_cutoff,max_amp_cutoff):
     # Assigning Well Types and Normalization
     print("Assigning control columns and well types...")
-    if control_cols.endswith((".txt",".tab")):
+    if control_cols.endswith((".txt",".tab",".csv")):
         well_mapping_df = pd.read_csv(control_cols, sep=delimiter, header=0)
         well_mapping_df['Row'] = well_mapping_df['Well'].str[0]
         well_mapping_df['Column'] = well_mapping_df['Well'].str[1:].str.replace(r'^(0+)', '', regex=True)
@@ -436,7 +492,8 @@ def default_analysis(final_df,control_cols,delimiter,normalization,smoothing_fac
     semifinal_curves['Subplot'] = semifinal_curves['Subplot'].astype(str)
     semifinal_curves[['Assay_Plate', 'Well']] = semifinal_curves['Unique_key'].str.rsplit('_', 1, expand=True)
     
-    Tm_df = pd.DataFrame(all_tm_rows)
+    Tm_df_raw = pd.DataFrame(all_tm_rows)
+    Tm_df = Tm_df_raw[Tm_df_raw['Well_type'] != 'Blank']
     print(f"Tm DataFrame created with {len(Tm_df)} rows.")
     
     if only_tm:

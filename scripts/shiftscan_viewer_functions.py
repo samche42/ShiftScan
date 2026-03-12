@@ -256,24 +256,29 @@ def generate_all_ctrls_graph(df):
     return figure
 
 def generate_Tm_heatmap(df, facet_row_max_spacing, mode):
+    sorted_rows = sorted(df['Row'].unique(), reverse=True) #Get letters for rows/y-axis
+    row_order = {"Row": sorted_rows} #Ensuring rows are presented in alphabetical order
     if mode == 'full':
         figure=px.scatter(df, x='Column', y='Row', color='Final_Tm', hover_name='Compound', 
                                     color_continuous_scale=[color1,color2,color3,color4], color_continuous_midpoint=50,
                                     hover_data={'Platename':False, 'Fraction':True, 'Final_Tm':True,'Column':False, 'Row':False, 'Well':True, 'Error':True,'Unique_key':True, 'Well_zscore':True},
                                     facet_col='Platename', facet_col_wrap=1, facet_row_spacing=facet_row_max_spacing, 
-                                    render_mode = 'auto')
+                                    render_mode = 'auto',
+                                    category_orders=row_order)
     elif mode == 'only_tm':
         figure=px.scatter(df, x='Column', y='Row', color='Smooth_Tm', hover_name='Compound', 
                                     color_continuous_scale=[color1,color2,color3,color4], color_continuous_midpoint=50,
                                     hover_data={'Source_Plate':False, 'Fraction':True, 'Smooth_Tm':True,'Column':False, 'Row':False, 'Well':True, 'Error':True,'Unique_key':True},
                                     facet_col='Source_Plate', facet_col_wrap=1, facet_row_spacing=facet_row_max_spacing, 
-                                    render_mode = 'auto')
+                                    render_mode = 'auto',
+                                    category_orders=row_order)
     if mode == 'dose_response':
         figure=px.scatter(df, x='Column', y='Row', color='Final_Tm', hover_name='Compound', 
                                     color_continuous_scale=[color1,color2,color3,color4], color_continuous_midpoint=50,
                                     hover_data={'Source_Plate':False, 'Concentration':True, 'Replicate':True, 'Fraction':True, 'Smooth_Tm':True,'Column':False, 'Row':False, 'Well':True, 'Error':True,'Unique_key':True},
                                     facet_col='Source_Plate', facet_col_wrap=1, facet_row_spacing=facet_row_max_spacing, 
-                                    render_mode = 'auto')
+                                    render_mode = 'auto',
+                                    category_orders=row_order)
     return figure
 
 def generate_zscore_heatmap(df, facet_row_max_spacing):
@@ -1674,12 +1679,3 @@ def DR_callbacks(app, df_results, df_curves, mode):
         multi_line_avg_figure = generate_avg_curves(multi_curve_df_avg)
         
         return indiv_figure, delta_figure, multi_line_avg_figure
-
-
-
-
-
-
-
-
-
