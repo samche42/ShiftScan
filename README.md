@@ -1,4 +1,4 @@
-# ShiftScan v.2.0.0
+# ShiftScan v.2.0.1
 Analysis and visualization of high-throughput DSF data
  
 Version 2 includes a complete refactoring of the code to allow better modularity for the addition of new "modes", and now comes with a dose response mode!
