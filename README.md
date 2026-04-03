@@ -1,7 +1,7 @@
-# ShiftScan v.2.0.1
+# ShiftScan v.2.1.0
 Analysis and visualization of high-throughput DSF data
  
-Version 2 includes a complete refactoring of the code to allow better modularity for the addition of new "modes", and now comes with a dose response mode!
+Version 2 includes a complete refactoring of the code to allow better modularity for the addition of new "modes", and now comes with both a dose response mode, and a "negative" mode for handling reverse sigmoid patterns (e.g. RNA binding assays)!
 
 ## Usage Instructions
 ShiftScan is designed for high-performance analysis of DSF data. It offers multiple ways to interact with the software (command line, Google Colab, or an app), depending on your familiarity with command-line tools and your performance expectations.
@@ -92,7 +92,13 @@ ___
 
 Navigate to where ShiftScan was installed (unless you've added it to your PATH). The analysis pipeline can be run with :
 
-**Command:** ```python shiftscan.py -i example_input/ -m example_metadata/metadata.txt -o example_output/```.
+**Command:** 
+```
+python shiftscan.py \
+    -i example_input/ \
+    -m example_metadata/metadata.txt \
+    -o example_output/
+```
 
 where the parameters are:
 
@@ -103,7 +109,14 @@ where the parameters are:
 > [!NOTE]
 > If you only want the Tm values estimated and no further comparison or analysis, you can add the ```--only_tm``` flag, which will stop the pipeline early and generate a single output file with The estimated Tm value per sigmoidal region detected. This output will **not** work with the default companion tool (See later for details for visualization). Example code to use:
 > 
-> **Command:** ```python shiftscan.py -i example_input/ -m example_metadata/metadata.txt -o example_output/ --only_tm```
+> **Command:**
+```
+python shiftscan.py \
+    -i example_input/ \
+    -m example_metadata/metadata.txt \
+    -o example_output/ \
+    --only_tm
+```
 
 Additionally, there are some further parameters you can adjust if you would like to tweak how the data is processed
 
@@ -140,14 +153,32 @@ ___
 ### Running the analysis (Disk-intensive mode)
 If you are limited by available RAM but still need to run hundreds of plates, you may opt to use the disk-intensive mode of ShiftScan: 
 
-**Command:** ```python shiftscan.py -i example_input/ -m example_metadata/metadata.txt -o example_output/ --disk```
+**Command:** 
+```
+python shiftscan.py \
+     -i example_input/ \
+     -m example_metadata/metadata.txt \
+     -o example_output/ \
+     --disk
+```
 
 All available parameters are the same as in the RAM-intensive mode. Note that the disk-intensive mode will be slower than the RAM-intensive mode. 
 
 ___
 
 ### Dose-response mode
-Use this if you have tested your compound(s) at a variety of different concentrations. The metadata format will need to look like this:
+Use this if you have tested your compound(s) at a variety of different concentrations. 
+
+**Command:** 
+```
+python shiftscan.py \
+     -i dose_response_example_data/ \
+     -m example_metadata/metadata.txt \
+     -o dose_response_example_output/ \
+     --dose_response
+```
+
+The metadata format will need to look like this:
 
 | ASSAY_PLATE | SOURCE_PLATE | WELL | COMPOUND | FRACTION | REPLICATE | CONCENTRATION |
 |---|---|---|---|---|---|---|
@@ -160,6 +191,20 @@ Use this if you have tested your compound(s) at a variety of different concentra
 | DR_assay_plate | DR_source_plate | P24 | Compound1 | 0 | 1 | 0.96 |
 
 For a complete example please see the example file [here](https://github.com/samche42/ShiftScan/blob/main/scripts/Dose_response_example_data/DR_raw_input_data)
+
+___
+
+### "Negative" (reverse sigmoid) mode
+Use this if you have tested your compound(s) at a variety of different concentrations. 
+
+**Command:** 
+```
+python shiftscan.py \
+     -i dose_response_example_data/ \
+     -m example_metadata/metadata.txt \
+     -o dose_response_example_output/ \
+     --dose_response
+```
 ___
 
 ### Visualization
