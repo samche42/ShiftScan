@@ -172,10 +172,10 @@ Use this if you have tested your compound(s) at a variety of different concentra
 **Command:** 
 ```
 python shiftscan.py \
-     -i dose_response_example_data/ \
-     -m example_metadata/metadata.txt \
-     -o dose_response_example_output/ \
-     --dose_response
+    -i Dose_response_example_data/DR_raw_input_data \
+    -m Dose_response_example_data/metadata/metadata.txt \
+    -o Dose_response_example_output \
+    --dose_response
 ```
 
 The metadata format will need to look like this:
@@ -200,10 +200,10 @@ Use this if you have tested your compound(s) at a variety of different concentra
 **Command:** 
 ```
 python shiftscan.py \
-     -i dose_response_example_data/ \
-     -m example_metadata/metadata.txt \
-     -o dose_response_example_output/ \
-     --dose_response
+    -i Neg_mode_example_data/Neg_Input \
+    -m Neg_mode_example_data/metadata/metadata.txt \
+    -o neg_example_output \
+    --negative_mode
 ```
 ___
 
