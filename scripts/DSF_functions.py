@@ -240,7 +240,7 @@ def slice_list(positions,input_list):
         returned_list.append(input_list[start:end]) #Generate new list of coord lists for each slice position pair
     return returned_list
 
-def clean_curve(x,spl):
+def clean_curve(x,spl,mode="positive"):
     pred_y = splev(x, spl)
     pred_x = x
     minima, _n = find_peaks(-pred_y) #Find local minima of curve
@@ -264,33 +264,59 @@ def clean_curve(x,spl):
         total_count = len(second_deriv)
         neg_perc = neg_count/total_count*100
         pos_perc = pos_count/total_count*100
-        if average_slope < 0:
-            continue #If average slope is negative do not add it to final list
-        elif (neg_perc < 10)|(pos_perc <10): #If less than 10% of values of the 2nd deriv gradient are either positive or negative, the segment isn't sigmoidal and we shouldn't save it as a legit curve
-            continue
+        if mode == "positive":
+            if average_slope < 0:
+                continue #If average slope is negative do not add it to final list
+            elif (neg_perc < 10)|(pos_perc <10): #If less than 10% of values of the 2nd deriv gradient are either positive or negative, the segment isn't sigmoidal and we shouldn't save it as a legit curve
+                continue
+            else:
+                clean_x_list.append(x_slices[i])
+                clean_y_list.append(y_slices[i])
         else:
-            clean_x_list.append(x_slices[i])
-            clean_y_list.append(y_slices[i])
+            if average_slope > 0:
+                continue #If average slope is positive do not add it to final list
+            elif (neg_perc < 10)|(pos_perc <10): #If less than 10% of values of the 2nd deriv gradient are either positive or negative, the segment isn't sigmoidal and we shouldn't save it as a legit curve
+                continue
+            else:
+                clean_x_list.append(x_slices[i])
+                clean_y_list.append(y_slices[i])
     return clean_x_list, clean_y_list
 
-def split_curves(list_of_x_coords, list_of_y_coords):
+def split_curves(list_of_x_coords, list_of_y_coords, mode="positive"):
     new_list_of_x_coords = []
     new_list_of_y_coords = []
-    for i in range(len(list_of_x_coords)): #For each set of coordinates in the list...
-        first_deriv_y_coordinates = np.gradient(list_of_x_coords[i], list_of_y_coords[i]) #...Find the first derivative
-        maxima, _x = find_peaks(first_deriv_y_coordinates) #Find local maxima of first derivative curve
-        maxima = np.sort(np.append(maxima, [0,len(first_deriv_y_coordinates)])) #Add in 0 and last position of coordinates
-        if len(maxima) == 2: #If there is no maxima, we have a single curve and can return the original coordinate list
-            new_list_of_x_coords.append(list_of_x_coords[i])
-            new_list_of_y_coords.append(list_of_y_coords[i])
-        else: #If there is a maxima, we must split the graph
-            sliced_x = slice_list(maxima, list_of_x_coords[i])
-            sliced_y = slice_list(maxima, list_of_y_coords[i])
-            sliced_x = [sublist for sublist in sliced_x if len(sublist) >= 5]
-            sliced_y = [sublist for sublist in sliced_y if len(sublist) >= 5]
-            new_list_of_x_coords.extend(sliced_x)
-            new_list_of_y_coords.extend(sliced_y)
-    return new_list_of_x_coords,new_list_of_y_coords
+    if mode == "positive":
+        for i in range(len(list_of_x_coords)): #For each set of coordinates in the list...
+            first_deriv_y_coordinates = np.gradient(list_of_x_coords[i], list_of_y_coords[i]) #...Find the first derivative
+            maxima, _x = find_peaks(first_deriv_y_coordinates) #Find local maxima of first derivative curve
+            maxima = np.sort(np.append(maxima, [0,len(first_deriv_y_coordinates)])) #Add in 0 and last position of coordinates
+            if len(maxima) == 2: #If there is no maxima, we have a single curve and can return the original coordinate list
+                new_list_of_x_coords.append(list_of_x_coords[i])
+                new_list_of_y_coords.append(list_of_y_coords[i])
+            else: #If there is a maxima, we must split the graph
+                sliced_x = slice_list(maxima, list_of_x_coords[i])
+                sliced_y = slice_list(maxima, list_of_y_coords[i])
+                sliced_x = [sublist for sublist in sliced_x if len(sublist) >= 5]
+                sliced_y = [sublist for sublist in sliced_y if len(sublist) >= 5]
+                new_list_of_x_coords.extend(sliced_x)
+                new_list_of_y_coords.extend(sliced_y)
+        return new_list_of_x_coords,new_list_of_y_coords
+    else:
+        for i in range(len(list_of_x_coords)): #For each set of coordinates in the list...
+            first_deriv_y_coordinates = np.gradient(list_of_x_coords[i], list_of_y_coords[i]) #...Find the first derivative
+            minima, _x = find_peaks(-first_deriv_y_coordinates) #Find local minima of first derivative curve
+            minima = np.sort(np.append(minima, [0,len(first_deriv_y_coordinates)])) #Add in 0 and last position of coordinates
+            if len(minima) == 2: #If there is no minima, we have a single curve and can return the original coordinate list
+                new_list_of_x_coords.append(list_of_x_coords[i])
+                new_list_of_y_coords.append(list_of_y_coords[i])
+            else: #If there is minima, we must split the graph
+                sliced_x = slice_list(minima, list_of_x_coords[i])
+                sliced_y = slice_list(minima, list_of_y_coords[i])
+                sliced_x = [sublist for sublist in sliced_x if len(sublist) >= 5]
+                sliced_y = [sublist for sublist in sliced_y if len(sublist) >= 5]
+                new_list_of_x_coords.extend(sliced_x)
+                new_list_of_y_coords.extend(sliced_y)
+        return new_list_of_x_coords,new_list_of_y_coords
 
 def add_curve_data(unique_identifier, sub_plot, temps_list, smooth_y_list, boltzmann_y_list):
     keys = [unique_identifier for _ in range(len(temps_list))]
@@ -307,48 +333,64 @@ def add_curve_data(unique_identifier, sub_plot, temps_list, smooth_y_list, boltz
 def boltzmann_sigmoid(x, A, B, C, D):
     return A + (D - A) / (1 + np.exp(-B * (x - C)))
 
-def initial_params(smoothed_y_coords, smoothed_x_coords):
+def initial_params(smoothed_y_coords, smoothed_x_coords, mode="positive"):
     y_grad = np.gradient(smoothed_y_coords, smoothed_x_coords)
-    max_grad_index = int(np.where((y_grad == np.nanmax(y_grad)))[0][0])
-    inflection_point = smoothed_x_coords[max_grad_index]
-    exact_inflection_point = find_inflection(smoothed_x_coords,smoothed_y_coords)
-    infl_slope = np.nanmax(y_grad) #Find slope at inflection point
     low_asm = np.nanmin(smoothed_y_coords) #Get y coord of lower asymptotes
     high_asm = np.nanmax(smoothed_y_coords) #Get y coord of upper asymptote
-    return low_asm,infl_slope,inflection_point,high_asm #return all four values for 4 parameter logistic regression model
+    
+    if mode == "positive":
+        max_grad_index = int(np.where((y_grad == np.nanmax(y_grad)))[0][0])
+        inflection_point = smoothed_x_coords[max_grad_index]
+        infl_slope = np.nanmax(y_grad) #Find slope at inflection point
+        return low_asm, infl_slope, inflection_point, high_asm 
+    else:
+        min_grad_index = int(np.where((y_grad == np.nanmin(y_grad)))[0][0])
+        inflection_point = smoothed_x_coords[min_grad_index]
+        infl_slope = np.nanmin(y_grad) #Find slope at inflection point
+        return high_asm, infl_slope, inflection_point, low_asm
 
-def Model_data(model, predx, predy, init_params, maxfevopt):
+
+def Model_data(model, predx, predy, init_params, maxfevopt, mode="positive"):
     try:
-        popt, pcov = optimization.curve_fit(model, predx, predy, init_params, maxfev = maxfevopt,method='dogbox') #Run scipy curve_fit to fit data to model curve. Dogbox: https://stackoverflow.com/questions/55725139/fit-sigmoid-function-s-shape-curve-to-data-using-python
-        model_y_list_loop = model(predx, *popt) #Get model y-coordinates
-        residuals = predy - model_y_list_loop #Calculate residuals (difference between data points and model)
-        RSS = np.sum(residuals**2) #Get residual sum of squares
-        MSE = np.mean(residuals**2) #Get residual mean of squares
+        popt, pcov = optimization.curve_fit(model, predx, predy, init_params, maxfev = maxfevopt,method='dogbox') 
+        model_y_list_loop = model(predx, *popt) 
+        residuals = predy - model_y_list_loop 
+        RSS = np.sum(residuals**2) 
+        MSE = np.mean(residuals**2) 
         y_grad = np.gradient(model_y_list_loop, predx)
-        Tm = predx[int(np.where((y_grad==np.nanmax(y_grad)))[0][0])]
+        if mode == "positive":
+            Tm = predx[int(np.where((y_grad==np.nanmax(y_grad)))[0][0])]
+        else:
+            Tm = predx[int(np.where((y_grad==np.nanmin(y_grad)))[0][0])]
         message = ''
     except TypeError:       
         try:
-            popt, pcov = optimization.curve_fit(model, predx, predy, init_params, maxfev = maxfevopt,method='lm') #Try alternate method which can deal with slightly more misbehaved curves
-            model_y_list_loop = model(predx, *popt) #Get model y-coordinates
-            residuals = predy - model_y_list_loop #Calculate residuals (difference between data points and model)
-            RSS = np.sum(residuals**2) #Get residual sum of squares
-            MSE = np.mean(residuals**2) #Get residual mean of squares
+            popt, pcov = optimization.curve_fit(model, predx, predy, init_params, maxfev = maxfevopt,method='lm') 
+            model_y_list_loop = model(predx, *popt) 
+            residuals = predy - model_y_list_loop 
+            RSS = np.sum(residuals**2) 
+            MSE = np.mean(residuals**2) 
             y_grad = np.gradient(model_y_list_loop, predx)
-            Tm = predx[int(np.where((y_grad==np.nanmax(y_grad)))[0][0])]
+            if mode == "positive":
+                Tm = predx[int(np.where((y_grad==np.nanmax(y_grad)))[0][0])]
+            else:
+                Tm = predx[int(np.where((y_grad==np.nanmin(y_grad)))[0][0])]
             message = ''
         except Exception:
             raise
     except RuntimeError as errorstring:
         if "Optimal parameters not found" in str(errorstring):
             try:
-                popt, pcov = optimization.curve_fit(model, predx, predy, init_params, maxfev = maxfevopt,method='lm') #Try alternate method which can deal with slightly more misbehaved curves
-                model_y_list_loop = model(predx, *popt) #Get model y-coordinates
-                residuals = predy - model_y_list_loop #Calculate residuals (difference between data points and model)
-                RSS = np.sum(residuals**2) #Get residual sum of squares
-                MSE = np.mean(residuals**2) #Get residual mean of squares
+                popt, pcov = optimization.curve_fit(model, predx, predy, init_params, maxfev = maxfevopt,method='lm') 
+                model_y_list_loop = model(predx, *popt) 
+                residuals = predy - model_y_list_loop 
+                RSS = np.sum(residuals**2) 
+                MSE = np.mean(residuals**2) 
                 y_grad = np.gradient(model_y_list_loop, predx)
-                Tm = predx[int(np.where((y_grad==np.nanmax(y_grad)))[0][0])]
+                if mode == "positive":
+                    Tm = predx[int(np.where((y_grad==np.nanmax(y_grad)))[0][0])]
+                else:
+                    Tm = predx[int(np.where((y_grad==np.nanmin(y_grad)))[0][0])]
                 message = ''
             except RuntimeError as errorstring2:
                 if "Optimal parameters not found" in str(errorstring2):
@@ -369,7 +411,7 @@ def Model_data(model, predx, predy, init_params, maxfevopt):
             raise
     return Tm, model_y_list_loop, MSE,RSS, message
 
-def process_well(sub_df,smoothing_factor,normalize):
+def process_well(sub_df,smoothing_factor,normalize,neg_mode):
     original_curve_rows = []
     sub_curve_rows = []
     temps = []
@@ -402,38 +444,71 @@ def process_well(sub_df,smoothing_factor,normalize):
         #Store original curve coordinates of smoothed data for well (i.e. curve isn't split yet)
         temps.append(x[0::4])
         smooth_fluorescence.append(list((splev(x, spl))[0::4]))
-        #Check for multiple peaks in first deriv graph
-        list_of_x_coords, list_of_y_coords = clean_curve(x,spl) # return list of lists where each index pair is a new "sub-curve"
-        curve_count = len(list_of_x_coords)
-        boltzmann_y_list = [None for _ in range(len(x[0::4]))]
-        original_curve_rows.append(add_curve_data(key, None,temps[0], smooth_fluorescence[0],boltzmann_y_list))
-        if curve_count == 0:
-            final_message = "Well failed: No region of positive slope or shape not sigmoidal"
-            new_Tm_rows = [{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':None,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': None,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':None,'Curve_height': None, 'Error':final_message,'Warning':''}]
-        elif curve_count > 4:
-            final_message = "Well failed: Too many subcurves identified - messy curve assumed"
-            new_Tm_rows = [{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':None,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': None,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':None,'Curve_height': None, 'Error':final_message,'Warning':''}]
+        if neg_mode == "no":
+            #Check for multiple peaks in first deriv graph
+            list_of_x_coords, list_of_y_coords = clean_curve(x,spl) # return list of lists where each index pair is a new "sub-curve"
+            curve_count = len(list_of_x_coords)
+            boltzmann_y_list = [None for _ in range(len(x[0::4]))]
+            original_curve_rows.append(add_curve_data(key, None,temps[0], smooth_fluorescence[0],boltzmann_y_list))
+            if curve_count == 0:
+                final_message = "Well failed: No region of positive slope or shape not sigmoidal"
+                new_Tm_rows = [{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':None,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': None,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':None,'Curve_height': None, 'Error':final_message,'Warning':''}]
+            elif curve_count > 4:
+                final_message = "Well failed: Too many subcurves identified - messy curve assumed"
+                new_Tm_rows = [{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':None,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': None,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':None,'Curve_height': None, 'Error':final_message,'Warning':''}]
+            else:
+                sub_plot_count = 0
+                final_list_of_x_coords, final_list_of_y_coords = split_curves(list_of_x_coords, list_of_y_coords) #Submit clean curve for second round of peak identification
+                final_list_of_y_coords = [list(arr) for arr in final_list_of_y_coords]
+                for k in range(len(final_list_of_x_coords)):
+                    sub_plot_count +=1 #Get a count for the subplots
+                    p0 = initial_params(final_list_of_y_coords[k],final_list_of_x_coords[k]) #Find initial parameters for model
+                    maxfev_opt = 100*(len(final_list_of_y_coords[k])+1) #Optimize maxfev parameter for each dataset https://www.physics.utoronto.ca/~phy326/python/curve_fit_to_data.py
+                    exact_inflection_point = find_inflection(final_list_of_x_coords[k],final_list_of_y_coords[k])
+                    if exact_inflection_point is None:
+                        boltzmann_y_coordinates = [None for _ in range(len(final_list_of_x_coords[k]))]
+                        sub_curve_rows.append(add_curve_data(key, sub_plot_count, final_list_of_x_coords[k], final_list_of_y_coords[k],boltzmann_y_coordinates))
+                        new_Tm_rows.extend([{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':sub_plot_count,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': exact_inflection_point,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':abs(p0[3] - p0[0]),'Curve_height': p0[3], 'Error':'Failed: Inflection point could not be determined','Warning':''}])
+                    else:
+                        boltzmann_Tm, boltzmann_y_coordinates, MSE, RSS, final_message = Model_data(boltzmann_sigmoid, final_list_of_x_coords[k],final_list_of_y_coords[k], p0, maxfev_opt) #Fit Boltzmann
+                        boltzmann_y_coordinates = (boltzmann_y_coordinates.tolist())
+                        sub_curve_rows.append(add_curve_data(key, sub_plot_count, final_list_of_x_coords[k], final_list_of_y_coords[k],boltzmann_y_coordinates))
+                        new_Tm_rows.extend([{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':sub_plot_count,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': exact_inflection_point,'Boltzmann_Tm':boltzmann_Tm,'Boltzmann_RSS': RSS,'Amplitude':abs(p0[3] - p0[0]),'Curve_height': p0[3], 'Error':final_message,'Warning':''}])
+            return original_curve_rows, sub_curve_rows, new_Tm_rows
         else:
-            sub_plot_count = 0
-            final_list_of_x_coords, final_list_of_y_coords = split_curves(list_of_x_coords, list_of_y_coords) #Submit clean curve for second round of peak identification
-            final_list_of_y_coords = [list(arr) for arr in final_list_of_y_coords]
-            for k in range(len(final_list_of_x_coords)):
-                sub_plot_count +=1 #Get a count for the subplots
-                p0 = initial_params(final_list_of_y_coords[k],final_list_of_x_coords[k]) #Find initial parameters for model
-                maxfev_opt = 100*(len(final_list_of_y_coords[k])+1) #Optimize maxfev parameter for each dataset https://www.physics.utoronto.ca/~phy326/python/curve_fit_to_data.py
-                exact_inflection_point = find_inflection(final_list_of_x_coords[k],final_list_of_y_coords[k])
-                if exact_inflection_point is None:
-                    boltzmann_y_coordinates = [None for _ in range(len(final_list_of_x_coords[k]))]
-                    sub_curve_rows.append(add_curve_data(key, sub_plot_count, final_list_of_x_coords[k], final_list_of_y_coords[k],boltzmann_y_coordinates))
-                    new_Tm_rows.extend([{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':sub_plot_count,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': exact_inflection_point,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':p0[3] - p0[0],'Curve_height': p0[3], 'Error':'Failed: Inflection point could not be determined','Warning':''}])
-                else:
-                    boltzmann_Tm, boltzmann_y_coordinates, MSE, RSS, final_message = Model_data(boltzmann_sigmoid, final_list_of_x_coords[k],final_list_of_y_coords[k], p0, maxfev_opt) #Fit Boltzmann
-                    boltzmann_y_coordinates = (boltzmann_y_coordinates.tolist())
-                    sub_curve_rows.append(add_curve_data(key, sub_plot_count, final_list_of_x_coords[k], final_list_of_y_coords[k],boltzmann_y_coordinates))
-                    new_Tm_rows.extend([{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':sub_plot_count,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': exact_inflection_point,'Boltzmann_Tm':boltzmann_Tm,'Boltzmann_RSS': RSS,'Amplitude':p0[3] - p0[0],'Curve_height': p0[3], 'Error':final_message,'Warning':''}])
-        return original_curve_rows, sub_curve_rows, new_Tm_rows
+            #Find the subcurve(s)
+            list_of_x_coords, list_of_y_coords = clean_curve(x,spl,"negative")
+            curve_count = len(list_of_x_coords)
+            boltzmann_y_list = [None for _ in range(len(x[0::4]))]
+            original_curve_rows.append(add_curve_data(key, None,temps[0], smooth_fluorescence[0],boltzmann_y_list))
+            if curve_count == 0: #If none, return "empty" row
+                final_message = "Well failed: No region of negative slope or shape not sigmoidal"
+                new_Tm_rows = [{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':None,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': None,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':None,'Curve_height': None, 'Error':final_message,'Warning':''}]
+            elif curve_count > 4: #If too many subcurves return empty row
+                final_message = "Well failed: Too many subcurves identified - messy curve assumed"
+                new_Tm_rows = [{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':None,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': None,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':None,'Curve_height': None, 'Error':final_message,'Warning':''}]
+            else:
+                #If one to three subcurves identified, model them
+                sub_plot_count = 0
+                final_list_of_x_coords, final_list_of_y_coords = split_curves(list_of_x_coords, list_of_y_coords, "negative") #Submit clean curve for second round of more refined peak identification
+                final_list_of_y_coords = [list(arr) for arr in final_list_of_y_coords]
+                for k in range(len(final_list_of_x_coords)):
+                    sub_plot_count +=1 #Get a count for the subplots
+                    p0 = initial_params(final_list_of_y_coords[k],final_list_of_x_coords[k],"negative") #Find initial parameters for model
+                    maxfev_opt = 100*(len(final_list_of_y_coords[k])+1) #Optimize maxfev parameter for each dataset https://www.physics.utoronto.ca/~phy326/python/curve_fit_to_data.py
+                    exact_inflection_point = find_inflection(final_list_of_x_coords[k],final_list_of_y_coords[k])
+                    if exact_inflection_point is None:
+                        boltzmann_y_coordinates = [None for _ in range(len(final_list_of_x_coords[k]))]
+                        sub_curve_rows.append(add_curve_data(key, sub_plot_count, final_list_of_x_coords[k], final_list_of_y_coords[k],boltzmann_y_coordinates))
+                        new_Tm_rows.extend([{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':sub_plot_count,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': exact_inflection_point,'Boltzmann_Tm':None,'Boltzmann_RSS': None,'Amplitude':abs(p0[3] - p0[0]),'Curve_height': p0[3], 'Error':'Failed: Inflection point could not be determined','Warning':''}])
+                    else:
+                        boltzmann_Tm, boltzmann_y_coordinates, MSE, RSS, final_message = Model_data(boltzmann_sigmoid, final_list_of_x_coords[k],final_list_of_y_coords[k], p0, maxfev_opt) #Fit Boltzmann
+                        boltzmann_y_coordinates = (boltzmann_y_coordinates.tolist())
+                        sub_curve_rows.append(add_curve_data(key, sub_plot_count, final_list_of_x_coords[k], final_list_of_y_coords[k],boltzmann_y_coordinates))
+                        new_Tm_rows.extend([{'Assay_Plate': sub_df.Assay_Plate.unique()[0], 'Source_Plate': sub_df.Source_Plate.unique()[0],'Well': sub_df.Well.unique()[0],'Unique_key': sub_df.Unique_key.unique()[0],'Subplot':sub_plot_count,'Well_type': sub_df.Well_type.unique()[0], 'Compound': sub_df.Compound.unique()[0],'Fraction': sub_df.Fraction.unique()[0],'Smooth_Tm': exact_inflection_point,'Boltzmann_Tm':boltzmann_Tm,'Boltzmann_RSS': RSS,'Amplitude':abs(p0[3] - p0[0]),'Curve_height': p0[3], 'Error':final_message,'Warning':''}])
+            return original_curve_rows, sub_curve_rows, new_Tm_rows
 
-def default_analysis(final_df,control_cols,delimiter,normalization,smoothing_factor,processors,only_tm,dose_response,failed_control_wells,ctrl_tm_cutoff,ctrl_amp_cutoff,min_amp_cutoff,max_amp_cutoff):
+def default_analysis(final_df,control_cols,delimiter,normalization,smoothing_factor,processors,only_tm,dose_response,neg_mode,failed_control_wells,ctrl_tm_cutoff,ctrl_amp_cutoff,min_amp_cutoff,max_amp_cutoff):
     # Assigning Well Types and Normalization
     print("Assigning control columns and well types...")
     if control_cols.endswith((".txt",".tab",".csv")):
@@ -472,7 +547,7 @@ def default_analysis(final_df,control_cols,delimiter,normalization,smoothing_fac
     all_tm_rows = []
     
     with multiprocessing.Pool(processes=int(processors)) as pool:
-        partial_process_wrapper = partial(process_well, smoothing_factor=smoothing_factor, normalize=normalization)
+        partial_process_wrapper = partial(process_well, smoothing_factor=smoothing_factor, normalize=normalization, neg_mode=neg_mode)
         results = pool.map(partial_process_wrapper, list_of_sub_dfs)
         for original_curve_rows, sub_curve_rows, Tm_rows in results:
             all_original_curve_rows.extend(original_curve_rows)

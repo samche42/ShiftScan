@@ -26,6 +26,7 @@ if __name__ == '__main__':
     parser.add_argument("--disk", action='store_true', help="Use disk-based (plate-wise) processing for lower RAM usage. Default is RAM-based.")
     parser.add_argument("--only_tm", action='store_true', help="Flag to enable only Tm calling mode, skipping QC and reports.")
     parser.add_argument("--dose_response", action='store_true', help="Flag to enable dose response mode")
+    parser.add_argument("--negative_mode", action='store_true', help="Flag to enable reverse sigmoid recognition mode")
 
     args = parser.parse_args()
 
@@ -47,6 +48,7 @@ if __name__ == '__main__':
     #Read in metadata
     dose_response = ("yes" if args.dose_response else "no")
     map_raw_df = read_default_metadata(args.metadata, delimiter, dose_response)
+    neg_mode = ("yes" if args.negative_mode else "no")
 
     # Define a dictionary of parameters to pass to the analysis function
     analysis_params = {
@@ -57,6 +59,7 @@ if __name__ == '__main__':
         'processors': args.processors,
         'only_tm': args.only_tm,
         'dose_response':args.dose_response,
+        'neg_mode': neg_mode,
         'failed_control_wells': args.failed_control_wells,
         'ctrl_tm_cutoff': args.ctrl_tm_cutoff,
         'ctrl_amp_cutoff': args.ctrl_amp_cutoff,
